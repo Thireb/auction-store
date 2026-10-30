@@ -1,4 +1,4 @@
-{% load static %}<!doctype html>
+{% load static category_nav %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -13,12 +13,24 @@
   <style>[x-cloak]{display:none!important}</style>
 </head>
 <body class="min-h-screen flex flex-col bg-gray-50 text-gray-900"
+      x-data="{ nav: false }" @nav-open.window="nav = true" @nav-close.window="nav = false"
+      @keydown.escape.window="nav = false"
       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   {% include "partials/header.html" %}
   {% include "partials/messages.html" %}
-  <main class="flex-1 w-full max-w-6xl mx-auto px-4 py-6">
-    {% block content %}{% endblock %}
-  </main>
+  <div class="flex-1 w-full max-w-7xl mx-auto px-4 py-6 flex gap-6">
+    {% block sidebar %}
+      {# Left category menu: always open on large screens, a drawer on phones. #}
+      <div class="fixed inset-0 z-30 bg-black/40 lg:hidden" x-show="nav" x-cloak @click="nav = false"></div>
+      <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] overflow-y-auto bg-white p-4 -translate-x-full transition-[translate] lg:static lg:z-auto lg:w-60 lg:max-w-none lg:shrink-0 lg:translate-x-0 lg:bg-transparent lg:p-0 lg:overflow-visible"
+             :style="nav ? 'translate: none' : ''">
+        <div class="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">{% category_nav %}</div>
+      </aside>
+    {% endblock %}
+    <main class="flex-1 min-w-0">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
   {% include "partials/footer.html" %}
   {% block extra_js %}{% endblock %}
 </body>

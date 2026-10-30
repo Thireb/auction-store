@@ -2,6 +2,7 @@ from django.core.paginator import Paginator
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, render
 
+from . import nav
 from .models import Category, Product, ProductImage, Variant
 from .pricing import buyer_is_wholesale, visible_tiers
 from .search import filter_options, filter_products
@@ -9,14 +10,17 @@ from .search import filter_options, filter_products
 PAGE_SIZE = 24
 
 
-def product_queryset(listed=True):
-    products = Product.objects.listed() if listed else Product.objects.visible()
-    return products.select_related("category", "brand").prefetch_related(
-        Prefetch(
-            "variants",
-            queryset=Variant.objects.filter(is_active=True).prefetch_related("price_tiers"),
-        ),
-        Prefetch("images", queryset=ProductImage.objects.order_by("sort_order", "pk")),
+def product_queryset():
+    return (
+        Product.objects.listed()
+        .select_related("category", "brand")
+        .prefetch_related(
+            Prefetch(
+                "variants",
+                queryset=Variant.objects.filter(is_active=True).prefetch_related("price_tiers"),
+            ),
+            Prefetch("images", queryset=ProductImage.objects.order_by("sort_order", "pk")),
+        )
     )
 
 
@@ -58,7 +62,7 @@ def category_detail(request, slug):
 
 
 def product_detail(request, slug):
-    product = get_object_or_404(product_queryset(listed=False), slug=slug)
+    product = get_object_or_404(product_queryset(), slug=slug)
     variants = product.active_variants()
     wholesale = buyer_is_wholesale(request.user)
     context = {
@@ -90,3 +94,15 @@ def product_detail(request, slug):
         "breadcrumbs": product.category.ancestors(include_self=True),
     }
     return render(request, "catalog/product_detail.html", context)
+
+
+def nav_children(request, pk):
+    """HTMX: the sub-categories of one category, for the sidebar tree."""
+    return render(request, "catalog/partials/category_tree.html", {"nodes": nav.children_of(pk)})
+
+
+def nav_search(request):
+    """HTMX: categories whose name matches the sidebar search box."""
+    query = request.GET.get("q", "").strip()
+    context = {"results": nav.search(query), "query": query}
+    return render(request, "catalog/partials/category_search.html", context)

@@ -13,7 +13,10 @@
   {% endif %}
 
   <div class="mt-6 grid md:grid-cols-4 gap-6">
-    <aside>{% include "catalog/partials/filters.html" %}</aside>
+    <details class="md:block" x-data x-init="$el.open = window.innerWidth >= 768">
+      <summary class="md:hidden cursor-pointer font-medium py-1">Filters and sort</summary>
+      <div class="mt-2 md:mt-0">{% include "catalog/partials/filters.html" %}</div>
+    </details>
     <div class="md:col-span-3">{% include "catalog/partials/results.html" %}</div>
   </div>
 {% endblock %}

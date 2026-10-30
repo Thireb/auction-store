@@ -1,0 +1,5 @@
+<div id="attribute-fields" class="grid sm:grid-cols-2 gap-3">
+  {% for field in form.attribute_fields %}{% include "portal/partials/field.html" %}{% empty %}
+    <p class="text-gray-500 sm:col-span-2">This category has no attributes. Add them under Catalog &rsaquo; Attributes.</p>
+  {% endfor %}
+</div>

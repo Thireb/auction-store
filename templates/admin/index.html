@@ -2,11 +2,8 @@
 
 {% block content %}
   <div class="module" style="padding:10px;margin-bottom:20px">
-    <a class="button" href="{% url 'admin_dashboard' %}">Dashboard</a>
-    {% if request.user.is_superuser %}<a class="button" href="{% url 'admin_staff_activity' %}">Staff activity</a>{% endif %}
-    <a class="button" href="{% url 'admin:catalog_variant_changelist' %}">Stock view</a>
-    <a class="button" href="{% url 'admin:catalog_variant_changelist' %}?stock=low">Low stock</a>
-    <a class="button" href="{% url 'admin:orders_order_changelist' %}?status__exact=pending_confirmation">Orders to confirm</a>
+    This is the owner's fallback. Daily work happens in the
+    <a class="button" href="{% url 'portal:dashboard' %}">Staff portal</a>
   </div>
   {{ block.super }}
 {% endblock %}

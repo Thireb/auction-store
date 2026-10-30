@@ -5,16 +5,18 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
 from apps.accounts import views as accounts_views
-from apps.core import dashboard
 from apps.core import views as core_views
 from apps.core.sitemaps import SITEMAPS
 
 admin.site.site_header = f"{settings.STORE_NAME} admin"
 admin.site.site_title = settings.STORE_NAME
-admin.site.index_title = "Back office"
+admin.site.index_title = "Back office (owner fallback)"
+# Staff work in the staff portal (/staff/). The Django admin stays as a hidden fallback
+# for the owner only.
+admin.site.has_permission = lambda request: request.user.is_active and request.user.is_superuser
 
 urlpatterns = [
-    path(settings.ADMIN_URL, include(dashboard.urlpatterns)),
+    path("staff/", include("apps.portal.urls")),
     path(settings.ADMIN_URL, admin.site.urls),
     path("", include("apps.core.urls")),
     path("", include("apps.catalog.urls")),

@@ -8,7 +8,7 @@ This file tells AI coding agents (Claude, Codex, Copilot and others) how to work
 - Payment is **Cash on Delivery only**. There is no payment gateway. A large item can need an advance, which the customer pays by bank transfer and proves with a screenshot.
 - Currency is **PKR only**. Language is **English only**. Time zone is `Asia/Karachi`.
 - **No paid services** (no SMS gateway, no paid WhatsApp API, no paid SaaS) unless the owner approves them.
-- The owner controls everything from the Django admin. **A new category, attribute, fee or page must never need a code change.**
+- The owner and staff work in the **staff portal** at `/staff/` (`apps/portal`). The Django admin is only a hidden fallback for the owner (superusers only). **A new category, attribute, fee or page must never need a code change.**
 
 ## 2. Tech stack
 
@@ -36,6 +36,7 @@ apps/inventory/    Lots, stock items, stock movements, services.py (all stock ch
 apps/shipping/     Shipping settings (single row), cities, services.quote()
 apps/cart/         Session cart (cart.py) and cart views
 apps/orders/       Orders, services.place_order(), workflow.transition(), notifications, admin
+apps/portal/       Staff portal: access.py (permissions and menu), views/, forms.py, history.py (audit)
 apps/accounts/     Login by phone, signup, account page, order tracking, wholesale buyers
 apps/<name>/tests/ Tests for that app
 templates/         Site-wide templates (base.html, partials/)
@@ -94,14 +95,16 @@ Commit messages: an imperative summary line ("Add price tiers to variants"), the
 - Stock changes only through a stock service that writes a `StockMovement` row with the user and the reason. Use `select_for_update()` inside a transaction when you reserve stock.
 - Order status changes only through the order service, which checks the allowed transitions and writes the history.
 - Never trust prices or totals from the browser. Calculate them again on the server.
+- Customers never see a product without stock (`Product.objects.listed()`), because most items are one-off pieces. Staff see stock levels through `apps.inventory.levels` (near empty, out of stock).
 
-### Admin-first
+### Staff portal first
 
-- Every model that the owner needs to manage is in the admin, with useful `list_display`, `list_filter` and `search_fields`.
+- Every model that staff or the owner manage has a page in the staff portal (`apps/portal`). Simple models use the `Crud` class in `apps/portal/views/simple.py`. Protect each view with `portal_view(perm)` and add it to `MENU` in `apps/portal/access.py`.
+- Keep the Django admin registrations working as the owner's fallback, but do not build new staff features there.
 - Add `HistoricalRecords()` (django-simple-history) to every model that staff edit, so the owner sees who changed what.
 - Staff do not delete. Use `is_active` to hide. Only the owner (superuser) deletes.
 - When a new model needs staff access, add its permissions to `apps/core/roles.py`. `manage.py setup_roles` runs at container start.
-- Sensitive actions use custom permissions (for example `view_cost_and_profit`, `change_price`, `adjust_stock`). Check them in the admin and in services.
+- Sensitive actions use custom permissions (for example `view_cost_and_profit`, `change_price`, `adjust_stock`). Check them in the portal views and in services.
 
 ### Templates, HTMX and Alpine
 
@@ -136,7 +139,7 @@ Commit messages: an imperative summary line ("Add price tiers to variants"), the
 
 ## 10. Things to avoid
 
-- Do not hard-code categories, attributes, cities, fees or bank details. They are data in the admin.
+- Do not hard-code categories, attributes, cities, fees or bank details. They are data in the staff portal.
 - Do not add a feature that needs a paid service.
 - Do not change a migration that is already on `main`. Add a new migration.
 - Do not remove or skip a failing test to make CI pass. Fix the cause.

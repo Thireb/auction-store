@@ -32,6 +32,12 @@ class ShippingSettings(models.Model):
         blank=True,
         help_text="Bank, Easypaisa or JazzCash details for customers who pay an advance.",
     )
+    low_stock_default = models.PositiveIntegerField(
+        "near empty at (store default)",
+        default=2,
+        help_text="Staff get an alert when an item has this many pieces or fewer left. "
+        "A variant can set its own number.",
+    )
     history = HistoricalRecords()
 
     class Meta:

@@ -34,7 +34,7 @@ def order_placed(order, request=None):
     """Email the owner about a new order, if ORDER_ALERT_EMAIL is set."""
     if not settings.ORDER_ALERT_EMAIL:
         return
-    path = reverse("admin:orders_order_change", args=[order.pk])
+    path = reverse("portal:order_detail", args=[order.pk])
     link = request.build_absolute_uri(path) if request else path
     lines = [
         f"{item.quantity} x {item.product_title} {item.variant_name}" for item in order.items.all()

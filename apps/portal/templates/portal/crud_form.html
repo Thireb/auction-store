@@ -1,0 +1,29 @@
+{% extends "portal/base.html" %}
+{% block content %}
+<p><a class="underline text-gray-600" href="{% url 'portal:'|add:crud.name|add:'_list' %}">&larr; {{ crud.opts.verbose_name_plural|capfirst }}</a></p>
+<h1 class="mt-1 text-xl font-bold">{{ title }}</h1>
+{% if crud.help_text %}<p class="mt-1 text-gray-600">{{ crud.help_text }}</p>{% endif %}
+<form method="post" enctype="multipart/form-data" class="mt-4 bg-white border rounded p-4 space-y-3 max-w-2xl">
+  {% csrf_token %}
+  {% include "portal/partials/form_fields.html" %}
+  {% if can_save %}
+    <div class="flex gap-2 pt-2">
+      <button class="px-4 py-2 rounded bg-gray-900 text-white">Save</button>
+      {% if not obj %}<button name="add_another" value="1" class="px-4 py-2 rounded border">Save and add another</button>{% endif %}
+    </div>
+  {% else %}<p class="text-gray-500">You can view this, but not change it.</p>{% endif %}
+</form>
+{% if stock_items %}
+  <h2 class="mt-6 font-bold">Stock from this lot</h2>
+  <div class="mt-2 bg-white border rounded overflow-x-auto"><table class="w-full">
+    <thead class="text-left text-gray-500 bg-gray-50"><tr><th class="px-3 py-2">Item</th><th class="px-3">Received</th><th class="px-3">On hand</th>{% if show_cost %}<th class="px-3">Cost per piece</th>{% endif %}</tr></thead>
+    <tbody>{% for item in stock_items %}<tr class="border-t"><td class="px-3 py-1.5"><a class="underline" href="{% url 'portal:variant_detail' item.variant_id %}">{{ item.variant }}</a></td><td class="px-3">{{ item.quantity_received }}</td><td class="px-3">{{ item.quantity_on_hand }}</td>{% if show_cost %}<td class="px-3">{{ item.cost_per_unit|default:"-" }}</td>{% endif %}</tr>{% endfor %}</tbody>
+  </table></div>
+{% endif %}
+{% if can_delete %}
+  <form method="post" action="{% url 'portal:'|add:crud.name|add:'_delete' obj.pk %}" class="mt-6" onsubmit="return confirm('Delete this for good?')">
+    {% csrf_token %}<button class="text-red-700 underline">Delete (owner only)</button>
+  </form>
+{% endif %}
+{% include "portal/partials/history.html" %}
+{% endblock %}

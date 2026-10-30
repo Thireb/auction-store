@@ -81,13 +81,13 @@ def test_wholesale_application_and_approval(client, buyer):
         )
     )
     client.force_login(staff)
-    url = reverse("admin:accounts_wholesaleprofile_changelist")
-    client.post(url, {"action": "approve", "_selected_action": [profile.pk]})
+    url = reverse("portal:wholesale_review", args=[profile.pk, WholesaleProfile.APPROVED])
+    assert client.post(url).status_code == 403  # No approve permission yet.
     profile.refresh_from_db()
-    assert profile.status == WholesaleProfile.PENDING  # No approve permission yet.
+    assert profile.status == WholesaleProfile.PENDING
 
     staff.user_permissions.add(Permission.objects.get(codename="approve_wholesale_buyer"))
-    client.post(url, {"action": "approve", "_selected_action": [profile.pk]})
+    client.post(url)
     profile.refresh_from_db()
     assert profile.is_approved and profile.reviewed_by == staff
 
