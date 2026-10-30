@@ -1,10 +1,13 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
 from apps.accounts import views as accounts_views
 from apps.core import dashboard
+from apps.core import views as core_views
+from apps.core.sitemaps import SITEMAPS
 
 admin.site.site_header = f"{settings.STORE_NAME} admin"
 admin.site.site_title = settings.STORE_NAME
@@ -18,6 +21,8 @@ urlpatterns = [
     path("cart/", include("apps.cart.urls")),
     path("account/", include("apps.accounts.urls")),
     path("track/", accounts_views.track_order, name="track_order"),
+    path("robots.txt", core_views.robots_txt, name="robots_txt"),
+    path("sitemap.xml", sitemap, {"sitemaps": SITEMAPS}, name="sitemap"),
     path("", include("apps.orders.urls")),
 ]
 
