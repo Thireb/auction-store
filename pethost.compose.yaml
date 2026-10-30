@@ -55,4 +55,4 @@ x-pethost:
   metadata: { name: Auction Store }
   routes:
     # Replace the host with <name>.<your PetHost apps domain> or your own domain.
-    - { host: auction-store.example.pethost.app, service: caddy, port: 8080 }
+    - { host: auction-store.thireb.pethost.app, service: caddy, port: 8080 }
