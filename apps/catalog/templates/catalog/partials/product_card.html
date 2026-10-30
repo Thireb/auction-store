@@ -1,6 +1,7 @@
 {% load money %}
 <a href="{{ product.get_absolute_url }}" class="block bg-white rounded border hover:shadow">
-  <div class="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+  <div class="relative aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+    {% if product.is_sold_out %}<span class="absolute top-2 left-2 rounded bg-red-600 text-white text-xs px-2 py-0.5">Sold</span>{% endif %}
     {% with image=product.main_image %}
       {% if image %}<img src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.title }}" class="object-cover w-full h-full" loading="lazy">
       {% else %}<span class="text-gray-400 text-sm">No image</span>{% endif %}

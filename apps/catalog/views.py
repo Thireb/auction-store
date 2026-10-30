@@ -8,17 +8,14 @@ from .pricing import buyer_is_wholesale, visible_tiers
 PAGE_SIZE = 24
 
 
-def product_queryset():
-    return (
-        Product.objects.visible()
-        .select_related("category", "brand")
-        .prefetch_related(
-            Prefetch(
-                "variants",
-                queryset=Variant.objects.filter(is_active=True).prefetch_related("price_tiers"),
-            ),
-            Prefetch("images", queryset=ProductImage.objects.order_by("sort_order", "pk")),
-        )
+def product_queryset(listed=True):
+    products = Product.objects.listed() if listed else Product.objects.visible()
+    return products.select_related("category", "brand").prefetch_related(
+        Prefetch(
+            "variants",
+            queryset=Variant.objects.filter(is_active=True).prefetch_related("price_tiers"),
+        ),
+        Prefetch("images", queryset=ProductImage.objects.order_by("sort_order", "pk")),
     )
 
 
@@ -45,7 +42,7 @@ def category_detail(request, slug):
 
 
 def product_detail(request, slug):
-    product = get_object_or_404(product_queryset(), slug=slug)
+    product = get_object_or_404(product_queryset(listed=False), slug=slug)
     variants = product.active_variants()
     wholesale = buyer_is_wholesale(request.user)
     context = {
