@@ -1,6 +1,6 @@
 # Auction Store: Project Plan
 
-Status: **draft for review, answers included (2026-10-30)**. No code is written until Ahmad approves this plan.
+Status: **approved by Ahmad on 2026-10-30**.
 
 ## 0. Decisions from Ahmad
 
