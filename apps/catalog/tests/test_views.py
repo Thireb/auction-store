@@ -66,3 +66,40 @@ def test_list_query_count_does_not_grow(client, django_assert_max_num_queries):
         VariantFactory(track_stock=False)
     with django_assert_max_num_queries(10):
         client.get(reverse("catalog:product_list"))
+
+
+def test_sidebar_opens_branch_of_current_category(client):
+    watches = CategoryFactory(name="Watches")
+    smart = CategoryFactory(name="Smart watches", parent=watches)
+    CategoryFactory(name="Fitness bands", parent=smart)
+    furniture = CategoryFactory(name="Furniture")
+    CategoryFactory(name="Sofas", parent=furniture)
+    content = client.get(reverse("catalog:category", args=[smart.slug])).content.decode()
+    assert 'id="category-nav"' in content
+    # The branch of the current category is rendered, other branches load on demand.
+    assert "Fitness bands" in content
+    assert "Sofas" not in content
+    assert f'hx-get="{reverse("catalog:nav_children", args=[furniture.pk])}"' in content
+    assert 'aria-current="page"' in content
+
+
+def test_sidebar_loads_children_and_searches(client):
+    furniture = CategoryFactory(name="Furniture")
+    CategoryFactory(name="Sofas", parent=furniture)
+    CategoryFactory(name="Hidden beds", parent=furniture, is_active=False)
+    content = client.get(
+        reverse("catalog:nav_children", args=[furniture.pk]), HTTP_HX_REQUEST="true"
+    ).content.decode()
+    assert "Sofas" in content and "Hidden beds" not in content
+    assert "<html" not in content
+    content = client.get(reverse("catalog:nav_search"), {"q": "sof"}).content.decode()
+    assert "Sofas" in content and "in Furniture" in content
+
+
+def test_product_page_opens_its_category_in_sidebar(client):
+    parent = CategoryFactory(name="Mobile accessories")
+    child = CategoryFactory(name="Chargers", parent=parent)
+    CategoryFactory(name="Cables", parent=parent)
+    variant = VariantFactory(track_stock=False, product=ProductFactory(category=child))
+    content = client.get(variant.product.get_absolute_url()).content.decode()
+    assert "Cables" in content

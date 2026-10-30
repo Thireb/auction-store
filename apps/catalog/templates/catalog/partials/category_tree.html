@@ -1,0 +1,25 @@
+{% load category_nav %}
+<ul class="category-tree" x-data="{ open: {{ nodes|open_node }} }">
+  {% for n in nodes %}
+    <li>
+      <div class="flex items-center">
+        <a href="{{ n.get_absolute_url }}" @click="$dispatch('nav-close')"
+           class="flex-1 px-2 py-1 rounded {% if n.is_current %}bg-gray-900 text-white font-medium{% elif n.on_path %}font-medium{% else %}hover:bg-gray-100{% endif %}"
+           {% if n.is_current %}aria-current="page"{% endif %}>{{ n.name }}</a>
+        {% if n.has_children %}
+          <button type="button" class="px-2 py-1 text-gray-500 hover:text-gray-900"
+                  @click="open = open === {{ n.pk }} ? null : {{ n.pk }}" :aria-expanded="open === {{ n.pk }}"
+                  aria-controls="nav-children-{{ n.pk }}" aria-label="Show sub-categories of {{ n.name }}"
+                  {% if not n.loaded_children %}hx-get="{% url 'catalog:nav_children' n.pk %}" hx-target="#nav-children-{{ n.pk }}" hx-trigger="click once"{% endif %}>
+            <span class="inline-block transition-transform" :class="open === {{ n.pk }} && 'rotate-90'">&#9656;</span>
+          </button>
+        {% endif %}
+      </div>
+      {% if n.has_children %}
+        <div id="nav-children-{{ n.pk }}" class="ml-3 pl-1 border-l" x-show="open === {{ n.pk }}" {% if not n.on_path %}x-cloak{% endif %}>
+          {% if n.loaded_children %}{% include "catalog/partials/category_tree.html" with nodes=n.loaded_children %}{% else %}<p class="px-2 py-1 text-gray-400">Loading...</p>{% endif %}
+        </div>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>
