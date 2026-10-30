@@ -10,6 +10,7 @@ admin.site.index_title = "Back office"
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     path("", include("apps.core.urls")),
+    path("", include("apps.catalog.urls")),
 ]
 
 if settings.DEBUG:

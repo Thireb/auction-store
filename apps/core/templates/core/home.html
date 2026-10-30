@@ -4,5 +4,20 @@
   <section class="py-10 text-center">
     <h1 class="text-3xl font-bold">{{ STORE_NAME }}</h1>
     <p class="mt-2 text-gray-600">Dubai auction items and export leftovers. Single pieces or bulk. Cash on Delivery.</p>
+    <a href="{% url 'catalog:product_list' %}" class="inline-block mt-4 px-4 py-2 rounded bg-black text-white">Shop all products</a>
   </section>
+
+  {% if featured %}
+    <h2 class="text-xl font-bold">Featured</h2>
+    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+      {% for product in featured %}{% include "catalog/partials/product_card.html" %}{% endfor %}
+    </div>
+  {% endif %}
+
+  {% if latest %}
+    <h2 class="mt-10 text-xl font-bold">New arrivals</h2>
+    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+      {% for product in latest %}{% include "catalog/partials/product_card.html" %}{% endfor %}
+    </div>
+  {% endif %}
 {% endblock %}
