@@ -1,0 +1,13 @@
+{% if history %}
+<details class="mt-6 bg-white border rounded">
+  <summary class="px-4 py-2 cursor-pointer font-medium">Change history ({{ history|length }})</summary>
+  <table class="w-full">
+    <thead class="text-left text-gray-500"><tr><th class="px-4 py-1">When</th><th class="px-2">Who</th><th class="px-2">Action</th><th class="px-2">Changes</th></tr></thead>
+    <tbody>
+      {% for row in history %}
+        <tr class="border-t align-top"><td class="px-4 py-1 whitespace-nowrap">{{ row.when|date:"d M Y H:i" }}</td><td class="px-2">{{ row.user|default:"-" }}</td><td class="px-2">{{ row.action }}</td><td class="px-2 break-all">{{ row.details }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endif %}

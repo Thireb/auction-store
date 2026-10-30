@@ -1,0 +1,38 @@
+{% extends "portal/base.html" %}
+{% load money %}
+{% block content %}
+<h1 class="text-xl font-bold">{{ title }}</h1>
+{% if level == "low" %}<p class="text-gray-600">Items with only a few pieces left. Customers can still buy them.</p>{% elif level == "out" %}<p class="text-gray-600">Items with no stock. Customers cannot see them. Receive stock to show them again.</p>{% endif %}
+<form method="get" class="mt-3 flex flex-wrap gap-2">
+  <input type="search" name="q" value="{{ q }}" placeholder="Product or SKU" class="border rounded px-2 py-1 bg-white">
+  {% if not fixed_level %}<select name="level" class="border rounded px-2 py-1 bg-white" onchange="this.form.submit()" aria-label="Stock level">
+    <option value="">All stock levels</option>
+    <option value="in" {% if level == "in" %}selected{% endif %}>In stock</option>
+    <option value="low" {% if level == "low" %}selected{% endif %}>Near empty</option>
+    <option value="out" {% if level == "out" %}selected{% endif %}>Out of stock</option>
+  </select>{% endif %}
+  <select name="category" class="border rounded px-2 py-1 bg-white max-w-xs" onchange="this.form.submit()" aria-label="Category">
+    <option value="">All categories</option>
+    {% for c in categories %}<option value="{{ c.pk }}" {% if c.pk|stringformat:"s" == category_id %}selected{% endif %}>{{ c }}</option>{% endfor %}
+  </select>
+  <button class="px-3 py-1 border rounded bg-white">Filter</button>
+</form>
+<div class="mt-3 bg-white border rounded overflow-x-auto">
+  <table class="w-full">
+    <thead class="text-left text-gray-500 bg-gray-50"><tr><th class="px-3 py-2">SKU</th><th class="px-3">Item</th><th class="px-3">Price</th><th class="px-3">On hand</th><th class="px-3">Reserved</th><th class="px-3">Available</th><th class="px-3">Near empty at</th></tr></thead>
+    <tbody>
+      {% for v in page_obj %}
+        <tr class="border-t hover:bg-gray-50 {% if v.track_stock and v.available <= 0 %}text-red-700{% elif v.track_stock and v.available <= v.low_at %}text-amber-700{% endif %}">
+          <td class="px-3 py-1.5"><a class="underline" href="{% url 'portal:variant_detail' v.pk %}">{{ v.sku }}</a></td>
+          <td class="px-3">{{ v }}{% if not v.is_active %} <span class="text-gray-500">(hidden)</span>{% endif %}</td>
+          <td class="px-3 whitespace-nowrap">{{ v.price|rupees }}</td>
+          <td class="px-3">{{ v.stock_on_hand }}</td><td class="px-3">{{ v.stock_reserved }}</td>
+          <td class="px-3 font-medium">{% if v.track_stock %}{{ v.available }}{% else %}&infin;{% endif %}</td>
+          <td class="px-3">{{ v.low_at }}{% if v.low_stock_threshold is None %} <span class="text-gray-400">(default)</span>{% endif %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="7" class="px-3 py-3 text-gray-500">Nothing found.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "portal/partials/pagination.html" %}
+{% endblock %}

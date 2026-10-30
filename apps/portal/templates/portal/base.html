@@ -1,0 +1,72 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% if title %}{{ title }} | {% endif %}Staff | {{ STORE_NAME }}</title>
+  {# Same pinned CDN builds as the store. #}
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js" defer></script>
+  <style>[x-cloak]{display:none!important}</style>
+</head>
+<body class="min-h-screen bg-gray-100 text-gray-900 text-sm" x-data="{ menu: false }"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <header class="bg-gray-900 text-white">
+    <div class="px-4 py-2 flex items-center gap-3">
+      <button type="button" class="lg:hidden text-lg" @click="menu = !menu" aria-label="Menu">&#9776;</button>
+      <a href="{% url 'portal:dashboard' %}" class="font-bold">{{ STORE_NAME }} &middot; Staff</a>
+      <div class="ml-auto flex items-center gap-4">
+        <a href="{% url 'core:home' %}" target="_blank" class="hidden sm:inline underline">View store</a>
+        {% if stock_alert_count is not None %}
+          <div class="relative" x-data="{ open: false }" id="stock-alerts">
+            <button type="button" @click="open = !open" class="relative px-1" aria-label="Near empty stock alerts">
+              &#128276;{% if stock_alert_count %}<span class="absolute -top-1 -right-2 rounded-full bg-red-600 text-white text-xs px-1.5">{{ stock_alert_count }}</span>{% endif %}
+            </button>
+            <div x-show="open" x-cloak @click.outside="open = false" class="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white text-gray-900 border rounded shadow-lg z-50">
+              <p class="px-3 py-2 font-semibold border-b">Near empty: {{ stock_alert_count }} item{{ stock_alert_count|pluralize }}</p>
+              <ul class="max-h-80 overflow-y-auto">
+                {% for v in stock_alerts %}<li class="border-b"><a class="block px-3 py-1.5 hover:bg-gray-50" href="{% url 'portal:variant_detail' v.pk %}">{{ v }} <span class="text-red-700 font-medium">{{ v.available }} left</span></a></li>{% empty %}<li class="px-3 py-2 text-gray-500">Nothing is near empty.</li>{% endfor %}
+              </ul>
+              <a class="block px-3 py-2 underline" href="{% url 'portal:stock_near_empty' %}">See all near-empty items</a>
+            </div>
+          </div>
+        {% endif %}
+        {% if user.is_authenticated %}
+          <span class="hidden sm:inline text-gray-300">{{ user.get_full_name|default:user.username }}{% if user.is_superuser %} (owner){% endif %}</span>
+          <form method="post" action="{% url 'portal:logout' %}">{% csrf_token %}<button class="underline">Log out</button></form>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+  <div class="flex">
+    {% if portal_menu %}
+      <div class="fixed inset-0 bg-black/40 z-30 lg:hidden" x-show="menu" x-cloak @click="menu = false"></div>
+      <nav id="portal-menu" class="fixed lg:static z-40 inset-y-0 left-0 w-60 shrink-0 bg-white border-r overflow-y-auto lg:block lg:min-h-[calc(100vh-40px)]"
+           :class="menu ? 'block' : 'hidden'" @click.outside="menu = false" aria-label="Staff menu">
+        <div class="p-3 space-y-4">
+          {% for section, items in portal_menu %}
+            <div>
+              {% if section %}<p class="px-2 text-xs font-semibold uppercase text-gray-500">{{ section }}</p>{% endif %}
+              <ul class="mt-1">
+                {% for label, url, active in items %}
+                  <li><a href="{{ url }}" class="block px-2 py-1 rounded {% if active %}bg-gray-900 text-white{% else %}hover:bg-gray-100{% endif %}"{% if active %} aria-current="page"{% endif %}>{{ label }}</a></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endfor %}
+        </div>
+      </nav>
+    {% endif %}
+    <main class="flex-1 min-w-0 p-4 lg:p-6">
+      {% for message in messages %}
+        <div class="mb-3 rounded border px-3 py-2 {% if message.tags == 'error' %}border-red-300 bg-red-50{% elif message.tags == 'success' %}border-green-300 bg-green-50{% else %}border-gray-300 bg-white{% endif %}" x-data="{ show: true }" x-show="show">
+          {{ message }} <button type="button" class="float-right" @click="show = false" aria-label="Close">&times;</button>
+        </div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

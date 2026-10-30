@@ -1,0 +1,105 @@
+{% extends "portal/base.html" %}
+{% load money %}
+{% block content %}
+<p><a class="underline text-gray-600" href="{% url 'portal:order_list' %}">&larr; Orders</a></p>
+<div class="mt-1 flex flex-wrap items-center gap-3">
+  <h1 class="text-xl font-bold">Order {{ order.number }}</h1>
+  <span class="px-2 py-0.5 rounded-full bg-gray-900 text-white" id="order-status">{{ order.get_status_display }}</span>
+  <span class="text-gray-500">Placed {{ order.created_at|date:"d M Y H:i" }}</span>
+  <a class="ml-auto underline" href="{% url 'portal:order_print' order.pk %}" target="_blank">Print slip and invoice</a>
+</div>
+
+<div class="mt-4 grid lg:grid-cols-3 gap-4">
+  <div class="lg:col-span-2 space-y-4">
+    <section class="bg-white border rounded p-4">
+      <h2 class="font-bold">Confirm with the customer</h2>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <a href="tel:{{ order.phone }}" class="px-3 py-2 rounded border bg-white">&#128222; Call {{ order.phone_display }}</a>
+        <a href="{{ whatsapp_url }}" target="_blank" rel="noopener" class="px-3 py-2 rounded border bg-white">WhatsApp message</a>
+      </div>
+      {% if transitions %}
+        <div class="mt-4" x-data="{ open: null }" id="status-actions">
+          <p class="font-medium">Change status</p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            {% for target, label in transitions %}
+              <button type="button" @click="open = open === '{{ target }}' ? null : '{{ target }}'" class="px-3 py-2 rounded {% if target == 'cancelled' or target == 'returned' %}border border-red-300 text-red-700{% else %}bg-gray-900 text-white{% endif %}">{{ label }}</button>
+            {% endfor %}
+          </div>
+          {% for target, label in transitions %}
+            <form method="post" action="{% url 'portal:order_transition' order.pk target %}" x-show="open === '{{ target }}'" x-cloak class="mt-3 border rounded p-3 bg-gray-50 grid sm:grid-cols-3 gap-2 items-end">
+              {% csrf_token %}
+              {% if target == "shipped" %}
+                <label>Courier *<input name="courier" required maxlength="60" class="w-full border rounded px-2 py-1 bg-white"></label>
+                <label>Tracking number<input name="tracking_number" maxlength="80" class="w-full border rounded px-2 py-1 bg-white"></label>
+              {% endif %}
+              <label class="{% if target != 'shipped' %}sm:col-span-2{% endif %}">Note<input name="note" maxlength="200" class="w-full border rounded px-2 py-1 bg-white" placeholder="Optional"></label>
+              <button class="px-3 py-1.5 rounded bg-gray-900 text-white">Mark as {{ label|lower }}</button>
+            </form>
+          {% endfor %}
+        </div>
+      {% elif can_change %}<p class="mt-3 text-gray-500">This order is closed.</p>{% endif %}
+    </section>
+
+    {% if order.advance_status != "not_required" %}
+    <section class="bg-white border rounded p-4" id="advance">
+      <h2 class="font-bold">Advance payment</h2>
+      <p class="mt-1">Advance: <b>{{ order.advance_amount|rupees }}</b> &middot; Status: <b>{{ order.get_advance_status_display }}</b> &middot; Cash to collect: <b>{{ order.cod_amount|rupees }}</b></p>
+      {% if order.advance_proof %}
+        <a href="{{ order.advance_proof.url }}" target="_blank" class="inline-block mt-2"><img src="{{ order.advance_proof.url }}" alt="Payment screenshot" class="max-h-48 border rounded"></a>
+      {% else %}<p class="mt-2 text-gray-500">The customer has not uploaded a payment screenshot yet.</p>{% endif %}
+      {% if can_mark_advance %}
+        <form method="post" action="{% url 'portal:order_advance' order.pk %}" class="mt-3 flex flex-wrap gap-2 items-end">
+          {% csrf_token %}
+          <label>Note<input name="note" maxlength="150" class="block border rounded px-2 py-1" placeholder="For example: checked in the bank app"></label>
+          <button class="px-3 py-1.5 rounded bg-green-700 text-white">Mark advance received</button>
+        </form>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="bg-white border rounded overflow-x-auto">
+      <table class="w-full">
+        <thead class="text-left text-gray-500 bg-gray-50"><tr><th class="px-3 py-2">Item</th><th class="px-3">SKU</th><th class="px-3">Price</th><th class="px-3">Qty</th><th class="px-3 text-right">Total</th></tr></thead>
+        <tbody>
+          {% for item in items %}<tr class="border-t"><td class="px-3 py-1.5">{% if item.variant_id %}<a class="underline" href="{% url 'portal:variant_detail' item.variant_id %}">{{ item.product_title }}</a>{% else %}{{ item.product_title }}{% endif %} {{ item.variant_name }}</td><td class="px-3">{{ item.sku }}</td><td class="px-3 whitespace-nowrap">{{ item.unit_price|rupees }}{% if item.unit_price != item.regular_price %} <s class="text-gray-400">{{ item.regular_price|rupees }}</s>{% endif %}</td><td class="px-3">{{ item.quantity }}</td><td class="px-3 text-right">{{ item.line_total|rupees }}</td></tr>{% endfor %}
+          <tr class="border-t"><td colspan="4" class="px-3 py-1 text-right">Subtotal</td><td class="px-3 text-right">{{ order.subtotal|rupees }}</td></tr>
+          <tr><td colspan="4" class="px-3 py-1 text-right">Delivery</td><td class="px-3 text-right">{{ order.delivery_fee|rupees }}</td></tr>
+          {% if order.cod_fee %}<tr><td colspan="4" class="px-3 py-1 text-right">COD fee</td><td class="px-3 text-right">{{ order.cod_fee|rupees }}</td></tr>{% endif %}
+          <tr class="font-bold"><td colspan="4" class="px-3 py-1 text-right">Total</td><td class="px-3 text-right">{{ order.total|rupees }}</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="bg-white border rounded p-4">
+      <h2 class="font-bold">Customer and delivery address</h2>
+      {% if order.customer_notes %}<p class="mt-1 rounded bg-yellow-50 border border-yellow-200 px-2 py-1">Customer note: {{ order.customer_notes }}</p>{% endif %}
+      <form method="post" class="mt-3">
+        {% csrf_token %}
+        {% for error in edit_form.non_field_errors %}<p class="text-red-700">{{ error }}</p>{% endfor %}
+        <div class="grid sm:grid-cols-2 gap-3">{% for field in edit_form %}<div class="{% if field.name == 'address' or field.name == 'staff_notes' %}sm:col-span-2{% endif %}">{% include "portal/partials/field.html" %}</div>{% endfor %}</div>
+        {% if can_change %}<button class="mt-3 px-4 py-2 rounded bg-gray-900 text-white">Save details</button>{% endif %}
+      </form>
+    </section>
+  </div>
+
+  <div class="space-y-4">
+    <section class="bg-white border rounded p-4">
+      <h2 class="font-bold">Status history</h2>
+      <ol class="mt-2 space-y-2">
+        {% for h in status_history %}<li><span class="text-gray-500">{{ h.created_at|date:"d M H:i" }}</span> &middot; {% if h.from_status != h.to_status %}{{ h.get_from_status_display }} &rarr; {{ h.get_to_status_display }}{% endif %} <span class="text-gray-500">{{ h.user|default:"customer" }}</span>{% if h.note %}<div>{{ h.note }}</div>{% endif %}</li>{% empty %}<li class="text-gray-500">New order. No changes yet.</li>{% endfor %}
+      </ol>
+    </section>
+    {% if shipments %}
+      <section class="bg-white border rounded p-4"><h2 class="font-bold">Shipments</h2>
+        <ul class="mt-2">{% for s in shipments %}<li>{{ s.courier }} {{ s.tracking_number }} <span class="text-gray-500">{{ s.booked_at|date:"d M H:i" }}</span></li>{% endfor %}</ul></section>
+    {% endif %}
+    <section class="bg-white border rounded p-4">
+      <h2 class="font-bold">Other orders from this phone</h2>
+      <ul class="mt-2">{% for o in other_orders %}<li><a class="underline" href="{% url 'portal:order_detail' o.pk %}">{{ o.number }}</a> {{ o.get_status_display }} &middot; {{ o.total|rupees }}</li>{% empty %}<li class="text-gray-500">None. This is a new customer.</li>{% endfor %}</ul>
+      {% if order.user %}<p class="mt-2 text-gray-500">Has an account: {{ order.user.username }}</p>{% endif %}
+      {% if order.ip_address %}<p class="text-gray-500">IP {{ order.ip_address }}</p>{% endif %}
+    </section>
+  </div>
+</div>
+{% include "portal/partials/history.html" %}
+{% endblock %}

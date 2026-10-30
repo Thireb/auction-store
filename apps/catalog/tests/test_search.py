@@ -32,7 +32,7 @@ def catalog():
     a.attribute_values_set.create(attribute=strap, value="Metal")
     b.attribute_values_set.create(attribute=strap, value="Silicone")
     stock.receive(VariantFactory(product=a, price=9000), 2)
-    VariantFactory(product=b, price=4000)
+    stock.receive(VariantFactory(product=b, price=4000), 1)
     stock.receive(VariantFactory(product=c, price=40000), 1)
     return watches
 
@@ -52,7 +52,6 @@ def test_price_condition_brand_and_stock_filters(client, catalog):
     }
     assert titles(client.get(url, {"condition": "open_box"})) == {"Sport watch"}
     assert titles(client.get(url, {"brand": "casio"})) == {"Classic steel watch"}
-    assert "Sport watch" not in titles(client.get(url, {"in_stock": "1"}))
 
 
 def test_sort_by_price(client, catalog):
@@ -90,13 +89,15 @@ def test_pagination_keeps_filters(client, catalog, settings):
 def test_search_leaves_out_products_that_do_not_match(client, catalog):
     # Postgres ranks a row that does not match at 1e-20, not 0.
     other = BrandFactory(name="Philips")
-    ProductFactory(
+    fryer = ProductFactory(
         title="Philips air fryer", brand=other, description="Air fryer. Checked by our team."
     )
-    ProductFactory(
+    bank = ProductFactory(
         title="Baseus power bank",
         brand=BrandFactory(name="Baseus"),
         description="Checked by our team.",
     )
+    VariantFactory(product=fryer, track_stock=False)
+    VariantFactory(product=bank, track_stock=False)
     url = reverse("catalog:product_list")
     assert titles(client.get(url, {"q": "air fryer"})) == {"Philips air fryer"}

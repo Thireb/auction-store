@@ -1,7 +1,6 @@
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
-from django.db.models import F
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
 from django.urls import path
@@ -141,16 +140,16 @@ class LowStockFilter(admin.SimpleListFilter):
     parameter_name = "stock"
 
     def lookups(self, request, model_admin):
-        return [("low", "Low stock"), ("out", "Out of stock")]
+        return [("low", "Near empty"), ("out", "Out of stock")]
 
     def queryset(self, request, queryset):
-        if self.value() not in ("low", "out"):
-            return None
-        available = F("stock_on_hand") - F("stock_reserved")
-        queryset = queryset.filter(track_stock=True).annotate(available_qty=available)
+        from apps.inventory import levels
+
         if self.value() == "low":
-            return queryset.filter(available_qty__lte=F("low_stock_threshold"), available_qty__gt=0)
-        return queryset.filter(available_qty__lte=0)
+            return levels.near_empty(queryset)
+        if self.value() == "out":
+            return levels.out_of_stock(queryset)
+        return None
 
 
 @admin.register(Variant)

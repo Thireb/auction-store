@@ -1,8 +1,6 @@
-from datetime import timedelta
 from decimal import Decimal
 
 from django import forms
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -192,10 +190,21 @@ class ProductQuerySet(models.QuerySet):
         """Products a customer can open."""
         return self.filter(is_active=True, category__is_active=True)
 
+    def in_stock(self):
+        """Products with at least 1 active variant that can be bought now."""
+        sellable = Variant.objects.filter(product=models.OuterRef("pk"), is_active=True).filter(
+            Q(track_stock=False) | Q(stock_on_hand__gt=models.F("stock_reserved"))
+        )
+        return self.filter(models.Exists(sellable))
+
+    def out_of_stock(self):
+        return self.exclude(pk__in=self.in_stock().values("pk"))
+
     def listed(self):
-        """Products in lists. Sold-out products stay listed for SOLD_OUT_LISTED_DAYS days."""
-        cutoff = timezone.now() - timedelta(days=settings.SOLD_OUT_LISTED_DAYS)
-        return self.visible().filter(Q(sold_out_at__isnull=True) | Q(sold_out_at__gte=cutoff))
+        """Products a customer sees: active and in stock. Most items are one-off pieces that
+        never come back, so a product with no stock disappears from lists, search and its page.
+        """
+        return self.visible().in_stock()
 
 
 class Product(SluggedModel):
@@ -326,7 +335,10 @@ class Variant(models.Model):
     stock_on_hand = models.IntegerField(default=0, editable=False)
     stock_reserved = models.IntegerField(default=0, editable=False)
     low_stock_threshold = models.PositiveIntegerField(
-        default=2, help_text="Show in the low stock list at or below this quantity."
+        "near empty at",
+        null=True,
+        blank=True,
+        help_text="Near empty at or below this quantity. Empty uses the store default.",
     )
     min_order_qty = models.PositiveIntegerField(
         "minimum order quantity", default=1, validators=[MinValueValidator(1)]

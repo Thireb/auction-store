@@ -1,0 +1,41 @@
+{% extends "portal/base.html" %}
+{% load money %}
+{% block content %}
+<div class="flex flex-wrap items-center gap-3">
+  <h1 class="text-xl font-bold">Products</h1>
+  {% if can_add %}<a href="{% url 'portal:product_add' %}" class="ml-auto px-3 py-1.5 rounded bg-gray-900 text-white">New product</a>{% endif %}
+</div>
+<form method="get" class="mt-3 flex flex-wrap gap-2">
+  <input type="search" name="q" value="{{ q }}" placeholder="Title, SKU or origin" class="border rounded px-2 py-1 bg-white">
+  <select name="category" class="border rounded px-2 py-1 bg-white max-w-xs" onchange="this.form.submit()" aria-label="Category">
+    <option value="">All categories</option>
+    {% for c in categories %}<option value="{{ c.pk }}" {% if c.pk|stringformat:"s" == category_id %}selected{% endif %}>{{ c }}</option>{% endfor %}
+  </select>
+  <select name="status" class="border rounded px-2 py-1 bg-white" onchange="this.form.submit()" aria-label="Status">
+    <option value="">Any status</option>
+    <option value="active" {% if status == "active" %}selected{% endif %}>In the store</option>
+    <option value="hidden" {% if status == "hidden" %}selected{% endif %}>Hidden</option>
+    <option value="in_stock" {% if status == "in_stock" %}selected{% endif %}>In stock</option>
+    <option value="sold_out" {% if status == "sold_out" %}selected{% endif %}>Out of stock (hidden from customers)</option>
+  </select>
+  <button class="px-3 py-1 border rounded bg-white">Filter</button>
+</form>
+<div class="mt-3 bg-white border rounded overflow-x-auto">
+  <table class="w-full">
+    <thead class="text-left text-gray-500 bg-gray-50"><tr><th class="px-3 py-2"></th><th class="px-3">Product</th><th class="px-3">Category</th><th class="px-3">Price</th><th class="px-3">Stock</th><th class="px-3">Status</th></tr></thead>
+    <tbody>
+      {% for p in page_obj %}
+        <tr class="border-t hover:bg-gray-50">
+          <td class="px-3 py-1.5 w-14">{% with img=p.main_image %}{% if img %}<img src="{{ img.image.url }}" alt="" class="h-10 w-10 object-cover rounded">{% else %}<div class="h-10 w-10 bg-gray-100 rounded"></div>{% endif %}{% endwith %}</td>
+          <td class="px-3"><a class="underline" href="{% url 'portal:product_edit' p.pk %}">{{ p.title }}</a><div class="text-xs text-gray-500">{% for v in p.variants.all %}{{ v.sku }}{% if not forloop.last %}, {% endif %}{% endfor %}</div></td>
+          <td class="px-3">{{ p.category }}</td>
+          <td class="px-3 whitespace-nowrap">{{ p.min_price|rupees }}</td>
+          <td class="px-3">{% for v in p.variants.all %}{% if v.track_stock %}{{ v.stock_available }}{% else %}&infin;{% endif %}{% if not forloop.last %} / {% endif %}{% endfor %}</td>
+          <td class="px-3">{% if not p.is_active %}<span class="text-gray-500">Hidden</span>{% elif p.is_sold_out %}<span class="text-red-700">Out of stock (hidden)</span>{% else %}In store{% endif %}{% if p.is_featured %} &middot; Featured{% endif %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="6" class="px-3 py-3 text-gray-500">No products found.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "portal/partials/pagination.html" %}
+{% endblock %}

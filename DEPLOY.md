@@ -31,8 +31,8 @@ Data that must survive a deploy is only in named volumes: `pgdata`, `media` (pro
    python manage.py setup_store
    ```
 
-   Then edit the pages and set the fees and the advance payment details in the admin: **Shipping and payment settings**.
-6. Smoke test: open the store, `/healthz/`, the admin login at `/<ADMIN_URL>`, place a test order and cancel it in the admin.
+   Then edit the pages and set the fees and the advance payment details in the staff portal at `/staff/settings/`.
+6. Smoke test: open the store, `/healthz/`, the staff portal at `/staff/`, place a test order and cancel it in the portal.
 7. When HTTPS works, set `SECURE_HSTS_SECONDS=31536000` in `/.env` and deploy again.
 
 Do not run `seed_demo` on the live store. It adds demo products.

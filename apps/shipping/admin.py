@@ -29,6 +29,7 @@ class ShippingSettingsAdmin(SimpleHistoryAdmin):
                 "description": "Set advances for single products or categories on them.",
             },
         ),
+        ("Stock", {"fields": ["low_stock_default"]}),
     ]
 
     def has_add_permission(self, request):

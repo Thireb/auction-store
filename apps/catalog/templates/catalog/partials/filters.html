@@ -19,7 +19,6 @@
       <input type="number" name="max_price" min="0" placeholder="Max" value="{{ active.max_price|default:'' }}" class="w-1/2 border rounded px-2 py-1">
     </div>
   </fieldset>
-  <label class="flex gap-2 items-center"><input type="checkbox" name="in_stock" value="1" {% if active.in_stock %}checked{% endif %}> In stock only</label>
   <fieldset>
     <legend class="font-medium">Condition</legend>
     {% for key, label in options.conditions %}

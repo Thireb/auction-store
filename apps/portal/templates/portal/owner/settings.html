@@ -1,0 +1,11 @@
+{% extends "portal/base.html" %}
+{% block content %}
+<h1 class="text-xl font-bold">Fees, payment and stock settings</h1>
+<p class="text-gray-600 max-w-2xl">These fees apply to every order. A city can have its own fees (Store settings &rsaquo; Cities). Advance rules for single products or categories are on the product or category.</p>
+<form method="post" class="mt-4 bg-white border rounded p-4 space-y-3 max-w-2xl">
+  {% csrf_token %}
+  {% include "portal/partials/form_fields.html" %}
+  <button class="px-4 py-2 rounded bg-gray-900 text-white">Save settings</button>
+</form>
+{% include "portal/partials/history.html" %}
+{% endblock %}
