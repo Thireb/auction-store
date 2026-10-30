@@ -1,9 +1,11 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from apps.accounts.demo import seed_people
 from apps.catalog.demo import seed_catalog
 from apps.core.demo import seed_pages
 from apps.inventory.demo import seed_inventory
+from apps.orders.demo import seed_orders
 from apps.shipping.demo import seed_shipping
 
 
@@ -16,4 +18,6 @@ class Command(BaseCommand):
         seed_inventory(self.stdout)
         seed_shipping(self.stdout)
         seed_pages(self.stdout)
+        seed_people(self.stdout)
+        seed_orders(self.stdout)
         self.stdout.write(self.style.SUCCESS("Demo data is ready."))

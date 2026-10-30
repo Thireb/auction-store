@@ -4,8 +4,9 @@ import io
 import random
 
 from django.core.files.base import ContentFile
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
+from .demo_extra import EXTRA_CATALOG, VARIANT_OPTIONS
 from .models import (
     Attribute,
     Brand,
@@ -231,19 +232,134 @@ PRODUCTS = [
 ]
 
 
-def placeholder_image(text, seed):
+IMAGE_VIEWS = ["Front", "Side", "Detail"]
+
+
+def _wrap(text, width):
+    lines, line = [], ""
+    for word in text.split():
+        if line and len(line) + len(word) + 1 > width:
+            lines.append(line)
+            line = word
+        else:
+            line = f"{line} {word}".strip()
+    return [*lines, line]
+
+
+def placeholder_image(text, seed, label=""):
+    """A product photo stand-in: a colored gradient, a simple shape and the title."""
     rng = random.Random(seed)
-    color = tuple(rng.randint(90, 220) for _ in range(3))
-    img = Image.new("RGB", (600, 600), color)
-    ImageDraw.Draw(img).text((30, 280), text[:40], fill=(20, 20, 20))
+    top = tuple(rng.randint(150, 235) for _ in range(3))
+    bottom = tuple(max(c - 70, 30) for c in top)
+    size = 600
+    img = Image.new("RGB", (size, size))
+    draw = ImageDraw.Draw(img)
+    for y in range(size):
+        t = y / size
+        draw.line(
+            [(0, y), (size, y)],
+            fill=tuple(int(a + (b - a) * t) for a, b in zip(top, bottom, strict=True)),
+        )
+    shade = tuple(max(c - 110, 10) for c in top)
+    box = (150, 120, 450, 360)
+    if seed % 3 == 0:
+        draw.ellipse(box, fill=shade)
+    elif seed % 3 == 1:
+        draw.rounded_rectangle(box, radius=40, fill=shade)
+    else:
+        draw.polygon([(300, 110), (460, 370), (140, 370)], fill=shade)
+    title_font = ImageFont.load_default(size=38)
+    small_font = ImageFont.load_default(size=24)
+    y = 400
+    for line in _wrap(text, 24)[:3]:
+        width = draw.textlength(line, font=title_font)
+        draw.text(((size - width) / 2, y), line, fill=(20, 20, 20), font=title_font)
+        y += 46
+    if label:
+        draw.text((24, 22), label, fill=(30, 30, 30), font=small_font)
     buffer = io.BytesIO()
-    img.save(buffer, format="JPEG", quality=80)
+    img.save(buffer, format="JPEG", quality=82)
     return ContentFile(buffer.getvalue())
+
+
+def generated_products():
+    """The products of EXTRA_CATALOG, in the same shape as PRODUCTS, plus the parent name."""
+    rng = random.Random(2026)
+    conditions = ["new", "new", "new", "open_box", "open_box", "used_like_new", "used_good"]
+    for parent, children in EXTRA_CATALOG.items():
+        for child, (brands, (low, high), kind, names) in children.items():
+            for name in names:
+                brand = rng.choice(brands)
+                price = round(rng.randint(low, high), -2 if high > 5000 else -1)
+                variants = None
+                if kind:
+                    variants = [
+                        (option, round(price * (1 + extra), -1))
+                        for option, extra in VARIANT_OPTIONS[kind]
+                    ]
+                attrs = {}
+                if kind != "color":
+                    attrs["Color"] = rng.choice(["Black", "White", "Brown", "Grey", "Blue"])
+                yield (
+                    f"{brand} {name}",
+                    child,
+                    brand,
+                    rng.choice(conditions),
+                    price,
+                    variants,
+                    attrs,
+                    parent,
+                )
+
+
+def _categories():
+    """Parent name -> child names, from CATEGORIES and EXTRA_CATALOG."""
+    tree = {parent: list(children) for parent, children in CATEGORIES.items()}
+    for parent, children in EXTRA_CATALOG.items():
+        names = tree.setdefault(parent, [])
+        names.extend(child for child in children if child not in names)
+    return tree
+
+
+def _create_product(row, sku_prefix, index, categories, brands, attributes):
+    title, cat, brand, condition, price, variants, attrs = row
+    product = Product.objects.create(
+        title=title,
+        category=categories[cat],
+        brand=brands.get(brand),
+        condition=condition,
+        description=(
+            f"{title}. Imported from a Dubai auction lot or export leftover stock. "
+            "Checked and photographed by our team before listing."
+        ),
+        origin_note="Dubai auction, demo lot",
+        is_featured=index % 5 == 0,
+    )
+    for n, (name, variant_price) in enumerate(variants or [("", price)]):
+        Variant.objects.create(
+            product=product,
+            sku=f"{sku_prefix}{index:03d}-{n}",
+            name=name,
+            price=variant_price,
+            compare_at_price=round(variant_price * 1.3, -2) if index % 3 == 0 else None,
+            sort_order=n,
+        )
+    for name, value in attrs.items():
+        ProductAttributeValue.objects.create(
+            product=product, attribute=attributes[name], value=value
+        )
+    for n, view in enumerate(IMAGE_VIEWS):
+        image = ProductImage(product=product, alt_text=f"{title}, {view.lower()}", sort_order=n)
+        image.image.save(
+            f"{sku_prefix.lower()}{index:03d}-{n}.jpg",
+            placeholder_image(title, len(sku_prefix) * 10000 + index * 10 + n, view),
+            save=True,
+        )
 
 
 def seed_catalog(stdout=None):
     categories = {}
-    for order, (parent_name, children) in enumerate(CATEGORIES.items()):
+    for order, (parent_name, children) in enumerate(_categories().items()):
         parent, _ = Category.objects.get_or_create(
             name=parent_name, parent=None, defaults={"sort_order": order}
         )
@@ -260,42 +376,21 @@ def seed_catalog(stdout=None):
             name=name,
             defaults={"type": type_, "choices": choices, "unit": unit, "sort_order": order},
         )
+        if name == "Color":
+            cat_names = [*cat_names, *EXTRA_CATALOG]
         attr.categories.add(*[categories[c] for c in cat_names])
         attributes[name] = attr
 
-    brands = {name: Brand.objects.get_or_create(name=name)[0] for name in BRANDS}
+    brand_names = {*BRANDS, *(row[2] for row in generated_products())}
+    brands = {name: Brand.objects.get_or_create(name=name)[0] for name in brand_names}
 
+    rows = [("DEMO-", i, row) for i, row in enumerate(PRODUCTS)]
+    rows += [("DEMO-G", i, row[:7]) for i, row in enumerate(generated_products())]
     created = 0
-    for i, (title, cat, brand, condition, price, variants, attrs) in enumerate(PRODUCTS):
-        if Product.objects.filter(title=title).exists():
+    for sku_prefix, index, row in rows:
+        if Product.objects.filter(title=row[0]).exists():
             continue
-        product = Product.objects.create(
-            title=title,
-            category=categories[cat],
-            brand=brands.get(brand),
-            condition=condition,
-            description=f"{title}. Imported from a Dubai auction lot. Checked by our team.",
-            origin_note="Dubai auction, demo lot",
-            is_featured=i % 5 == 0,
-        )
-        for n, (name, variant_price) in enumerate(variants or [("", price)]):
-            Variant.objects.create(
-                product=product,
-                sku=f"DEMO-{i:03d}-{n}",
-                name=name,
-                price=variant_price,
-                compare_at_price=round(variant_price * 1.3, -2) if i % 3 == 0 else None,
-                sort_order=n,
-            )
-        for name, value in attrs.items():
-            ProductAttributeValue.objects.create(
-                product=product, attribute=attributes[name], value=value
-            )
-        for n in range(2):
-            image = ProductImage(product=product, alt_text=title, sort_order=n)
-            image.image.save(
-                f"demo-{i:03d}-{n}.jpg", placeholder_image(title, i * 10 + n), save=True
-            )
+        _create_product(row, sku_prefix, index, categories, brands, attributes)
         created += 1
 
     if stdout:

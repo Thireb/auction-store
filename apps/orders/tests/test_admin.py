@@ -67,3 +67,20 @@ def test_print_view(owner_client, order):
     ).content.decode()
     assert order.number in content
     assert "COD: Rs" in content
+
+
+def test_advance_button_is_not_a_nested_form(owner_client, order):
+    # A <form> inside the admin change form is dropped by the browser, and the button then
+    # submitted the change form instead.
+    Order.objects.filter(pk=order.pk).update(
+        advance_amount=500, advance_status=Order.ADVANCE_PENDING
+    )
+    url = reverse("admin:orders_order_advance", args=[order.pk])
+    content = owner_client.get(
+        reverse("admin:orders_order_change", args=[order.pk])
+    ).content.decode()
+    assert f'formaction="{url}"' in content
+    assert f'action="{url}"' not in content.replace(f'formaction="{url}"', "")
+    assert owner_client.post(url).status_code == 302
+    order.refresh_from_db()
+    assert order.advance_status == Order.ADVANCE_RECEIVED
