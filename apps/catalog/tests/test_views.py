@@ -63,5 +63,5 @@ def test_home_shows_featured_and_menu(client):
 def test_list_query_count_does_not_grow(client, django_assert_max_num_queries):
     for _ in range(10):
         VariantFactory()
-    with django_assert_max_num_queries(8):
+    with django_assert_max_num_queries(10):
         client.get(reverse("catalog:product_list"))

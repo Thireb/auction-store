@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, render
 
 from .models import Category, Product, ProductImage, Variant
 from .pricing import buyer_is_wholesale, visible_tiers
+from .search import filter_options, filter_products
 
 PAGE_SIZE = 24
 
@@ -19,14 +20,29 @@ def product_queryset(listed=True):
     )
 
 
-def _render_list(request, products, context):
+def _render_list(request, products, context, category=None):
+    options = filter_options(products, category, request.GET)
+    products, active = filter_products(products, request.GET, category)
     page = Paginator(products, PAGE_SIZE).get_page(request.GET.get("page"))
-    context.update({"page_obj": page, "products": page.object_list})
+    query = request.GET.copy()
+    query.pop("page", None)
+    context.update(
+        {
+            "page_obj": page,
+            "products": page.object_list,
+            "options": options,
+            "active": active,
+            "query_string": query.urlencode(),
+        }
+    )
+    if request.htmx and not request.htmx.boosted:
+        return render(request, "catalog/partials/results.html", context)
     return render(request, "catalog/product_list.html", context)
 
 
 def product_list(request):
-    return _render_list(request, product_queryset(), {"title": "All products"})
+    title = "Search results" if request.GET.get("q") else "All products"
+    return _render_list(request, product_queryset(), {"title": title})
 
 
 def category_detail(request, slug):
@@ -38,7 +54,7 @@ def category_detail(request, slug):
         "breadcrumbs": category.ancestors(),
         "subcategories": category.children.filter(is_active=True),
     }
-    return _render_list(request, products, context)
+    return _render_list(request, products, context, category)
 
 
 def product_detail(request, slug):
