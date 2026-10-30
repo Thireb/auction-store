@@ -218,3 +218,20 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Auction store (Django project) ---
+# Uploaded product images and advance payment proofs
+/media/
+# Output of collectstatic
+/staticfiles/
+# Local database dumps
+*.dump
+*.sql.gz
+/backups/
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+# Tailwind / Node, if a CSS build is added later
+node_modules/
