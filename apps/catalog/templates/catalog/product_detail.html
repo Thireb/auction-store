@@ -62,9 +62,19 @@
           Minimum order <span x-text="variants[selected].min_qty"></span><span x-show="variants[selected].step > 1">, in steps of <span x-text="variants[selected].step"></span></span>.
         </p>
         <p class="mt-2 text-sm font-medium text-red-600" x-show="!variants[selected].in_stock" x-cloak>Sold out</p>
-        <div id="buy-box" class="mt-6">
-          {% block buy_box %}<p class="text-sm text-gray-500">Ordering opens soon.</p>{% endblock %}
-        </div>
+        <form id="buy-box" class="mt-6 flex flex-wrap items-end gap-3" method="post" action="{% url 'cart:add' %}"
+              hx-post="{% url 'cart:add' %}" hx-target="#buy-result" x-show="variants[selected].in_stock">
+          {% csrf_token %}
+          <input type="hidden" name="variant" :value="variants[selected].id" value="{{ variants.0.id }}">
+          <label class="text-sm">Quantity
+            <input type="number" name="quantity" class="block mt-1 w-24 border rounded px-2 py-1"
+                   value="{{ variants.0.min_order_qty }}" :value="variants[selected].min_qty"
+                   :min="variants[selected].min_qty" :step="variants[selected].step"
+                   :max="variants[selected].available ?? ''">
+          </label>
+          <button type="submit" class="px-4 py-2 rounded bg-black text-white">Add to cart</button>
+        </form>
+        <div id="buy-result" class="mt-2"></div>
       {% else %}
         <p class="mt-4 text-gray-500">Not available.</p>
       {% endif %}
