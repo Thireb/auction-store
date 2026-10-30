@@ -13,6 +13,7 @@ from apps.inventory import services as stock
 from apps.shipping.models import ShippingSettings
 from apps.shipping.services import quote
 
+from . import notifications
 from .models import BlockedPhone, Order, OrderItem, OrderStatusHistory
 
 
@@ -78,7 +79,7 @@ def check_customer_limits(phone, ip_address):
 
 
 @transaction.atomic
-def place_order(cart, customer, *, user=None, ip_address=None):
+def place_order(cart, customer, *, user=None, ip_address=None, request=None):
     """Create an order from the cart and reserve its stock. All or nothing.
 
     `customer` has: full_name, phone (normalized), email, city, address, landmark, notes.
@@ -138,4 +139,5 @@ def place_order(cart, customer, *, user=None, ip_address=None):
         order=order, from_status=order.status, to_status=order.status, note="Order placed"
     )
     cart.clear()
+    transaction.on_commit(lambda: notifications.order_placed(order, request))
     return order
