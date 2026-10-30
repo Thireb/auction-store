@@ -40,6 +40,7 @@ def test_product_form_saves_attribute_values(owner_client):
         "condition": "new",
         "is_active": "on",
         f"attr_{strap.pk}": "Metal",
+        "advance_value": "0",
         "variants-TOTAL_FORMS": "1",
         "variants-INITIAL_FORMS": "1",
         "variants-MIN_NUM_FORMS": "1",
