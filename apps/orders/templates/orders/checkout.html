@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout | {{ STORE_NAME }}{% endblock %}
+
+{% block content %}
+  <h1 class="text-2xl font-bold mb-4">Checkout</h1>
+  <div class="grid md:grid-cols-3 gap-6">
+    <form method="post" class="md:col-span-2 space-y-4 bg-white border rounded p-4" x-data="{ account: {{ form.create_account.value|yesno:'true,false' }} }" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="rounded border border-red-300 bg-red-50 p-3 text-sm">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}
+        {% if field.name == "create_account" %}
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="create_account" x-model="account" {% if field.value %}checked{% endif %}> {{ field.label }}</label>
+          {% if field.errors %}<p class="text-red-600 text-sm">{{ field.errors|join:" " }}</p>{% endif %}
+        {% elif field.name == "password" %}
+          <div x-show="account" x-cloak>
+            <label class="block text-sm font-medium" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<p class="text-red-600 text-sm">{{ field.errors|join:" " }}</p>{% endif %}
+          </div>
+        {% else %}
+          <div>
+            <label class="block text-sm font-medium" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<p class="text-red-600 text-sm">{{ field.errors|join:" " }}</p>{% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+      <p class="text-sm text-gray-600">Payment: Cash on Delivery. We call you to confirm the order before dispatch.</p>
+      <button type="submit" class="px-4 py-2 rounded bg-black text-white">Place order</button>
+    </form>
+    <div>{% include "orders/partials/order_summary.html" %}</div>
+  </div>
+{% endblock %}
