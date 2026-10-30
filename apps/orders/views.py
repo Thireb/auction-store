@@ -55,7 +55,9 @@ def checkout(request):
                 first_name=data["full_name"][:150],
             )
         try:
-            order = services.place_order(cart, data, user=user, ip_address=client_ip(request))
+            order = services.place_order(
+                cart, data, user=user, ip_address=client_ip(request), request=request
+            )
         except services.CheckoutError as exc:
             if data.get("create_account") and user:
                 user.delete()

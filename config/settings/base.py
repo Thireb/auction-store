@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.shipping",
     "apps.cart",
     "apps.orders",
+    "apps.accounts",
 ]
 
 MIDDLEWARE = [
@@ -100,6 +101,9 @@ STORAGES = {
 }
 
 ADMIN_URL = env("ADMIN_URL", default="admin/")
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "accounts:account"
+LOGOUT_REDIRECT_URL = "core:home"
 
 EMAIL_CONFIG = env.email_url("EMAIL_URL", default="consolemail://")
 vars().update(EMAIL_CONFIG)

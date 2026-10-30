@@ -1,0 +1,31 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+  {% if original %}
+    <li><a href="{% url 'admin:orders_order_print' original.pk %}" target="_blank">Print slip and invoice</a></li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
+
+{% block form_top %}
+  {% if original %}
+    <div class="module" style="padding:10px;margin-bottom:15px" id="order-actions">
+      <strong>Status: {{ original.get_status_display }}</strong>
+      {% if original.advance_status == "pending" %}
+        &nbsp;· Advance Rs {{ original.advance_amount }} pending
+        {% if can_mark_advance %}
+          <form method="post" action="{% url 'admin:orders_order_advance' original.pk %}" style="display:inline">
+            {% csrf_token %}<button type="submit" class="button">Mark advance received</button>
+          </form>
+        {% endif %}
+      {% endif %}
+      {% if transitions %}
+        <div style="margin-top:8px">Next step:
+          {% for target, label, url in transitions %}
+            <a class="button" href="{{ url }}" style="margin-right:6px">{{ label }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

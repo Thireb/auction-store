@@ -73,6 +73,9 @@ class Order(models.Model):
     advance_proof = models.ImageField(upload_to="advance-proofs/%Y/%m/", blank=True)
 
     staff_notes = models.TextField(blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    shipped_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -127,12 +130,46 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField()
     line_total = models.DecimalField(**MONEY)
     advance_amount = models.DecimalField(default=0, **MONEY)
+    cost_total = models.DecimalField(
+        null=True, blank=True, help_text="Stock cost, set at dispatch.", **MONEY
+    )
 
     class Meta:
         ordering = ["pk"]
 
     def __str__(self):
         return f"{self.quantity} x {self.product_title}"
+
+
+class OrderStatusHistory(models.Model):
+    order = models.ForeignKey(Order, related_name="status_history", on_delete=models.CASCADE)
+    from_status = models.CharField(max_length=24, choices=Order.STATUS_CHOICES)
+    to_status = models.CharField(max_length=24, choices=Order.STATUS_CHOICES)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
+    )
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        verbose_name_plural = "order status history"
+
+    def __str__(self):
+        return f"{self.order}: {self.from_status} -> {self.to_status}"
+
+
+class Shipment(models.Model):
+    order = models.ForeignKey(Order, related_name="shipments", on_delete=models.CASCADE)
+    courier = models.CharField(max_length=60)
+    tracking_number = models.CharField(max_length=80, blank=True)
+    booked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-booked_at"]
+
+    def __str__(self):
+        return f"{self.courier} {self.tracking_number}".strip()
 
 
 class BlockedPhone(models.Model):
