@@ -309,6 +309,7 @@ class StaffForm(StyledFormMixin, forms.ModelForm):
     )
     user_permissions = forms.ModelMultipleChoiceField(
         queryset=Permission.objects.filter(content_type__app_label__in=STAFF_APPS)
+        .exclude(content_type__model__startswith="historical")
         .select_related("content_type")
         .order_by("content_type__app_label", "content_type__model", "codename"),
         widget=forms.CheckboxSelectMultiple,

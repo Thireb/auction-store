@@ -442,6 +442,7 @@ def test_owner_creates_staff_account_with_role(client, owner):
     )
     assert response.status_code == 302
     sara = User.objects.get(username="sara")
+    assert "historical" not in client.get(reverse("portal:staff_add")).content.decode().lower()
     assert sara.is_staff and not sara.is_superuser
     assert sara.check_password("strong-pass-123")
     assert sara.has_perm("catalog.add_product") and sara.has_perm("catalog.change_price")
