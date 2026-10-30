@@ -41,6 +41,9 @@ services:
     volumes:
       - ./docker/backup.sh:/backup.sh:ro
       - backups:/backups
+    # The postgres image declares a data VOLUME. The backup service keeps no data there.
+    tmpfs:
+      - /var/lib/postgresql/data
     depends_on:
       db:
         condition: service_healthy
