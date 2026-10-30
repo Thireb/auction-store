@@ -1,24 +1,20 @@
-<header class="bg-white border-b" x-data="{ open: false }">
-  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+<header class="bg-white border-b">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+    <button type="button" class="lg:hidden px-2 py-1 border rounded text-sm" @click="$dispatch('nav-open')" aria-controls="sidebar" aria-label="Open categories">&#9776; Categories</button>
     <a href="{% url 'core:home' %}" class="font-bold text-lg">{{ STORE_NAME }}</a>
-    <nav class="hidden sm:flex gap-4 text-sm" id="main-nav">
-      <a href="{% url 'catalog:product_list' %}">All products</a>
-      {% for cat in nav_categories %}<a href="{{ cat.get_absolute_url }}">{{ cat.name }}</a>{% endfor %}
-    </nav>
-    <form action="{% url 'catalog:product_list' %}" method="get" class="hidden md:block ml-4">
-      <input type="search" name="q" placeholder="Search products" aria-label="Search products" class="border rounded px-2 py-1 text-sm">
+    <form action="{% url 'catalog:product_list' %}" method="get" class="hidden md:block ml-4 flex-1 max-w-md">
+      <input type="search" name="q" placeholder="Search products" aria-label="Search products" class="w-full border rounded px-2 py-1 text-sm">
     </form>
     <div class="ml-auto flex items-center gap-4 text-sm">
       <a href="{% url 'track_order' %}" class="hidden sm:inline">Track order</a>
+      {% if user.is_staff %}<a href="{% url 'portal:dashboard' %}" class="hidden sm:inline">Staff portal</a>{% endif %}
       {% if user.is_authenticated %}<a href="{% url 'accounts:account' %}">My account</a>{% else %}<a href="{% url 'accounts:login' %}">Log in</a>{% endif %}
       <a href="{% url 'cart:detail' %}" id="cart-link" class="font-medium">
         Cart (<span id="cart-count">{{ cart_count|default:0 }}</span>)
       </a>
-      <button type="button" class="sm:hidden" @click="open = !open" aria-label="Menu">&#9776;</button>
     </div>
   </div>
-  <nav class="sm:hidden px-4 pb-3 text-sm flex flex-col gap-2" x-show="open" x-cloak>
-    <a href="{% url 'catalog:product_list' %}">All products</a>
-    {% for cat in nav_categories %}<a href="{{ cat.get_absolute_url }}">{{ cat.name }}</a>{% endfor %}
-  </nav>
+  <form action="{% url 'catalog:product_list' %}" method="get" class="md:hidden px-4 pb-3">
+    <input type="search" name="q" placeholder="Search products" aria-label="Search products" class="w-full border rounded px-2 py-1 text-sm">
+  </form>
 </header>

@@ -1,0 +1,7 @@
+{% if query %}
+  <ul>
+    {% for c in results %}
+      <li><a href="{{ c.get_absolute_url }}" @click="$dispatch('nav-close')" class="block px-2 py-1 rounded hover:bg-gray-100">{{ c.name }}{% if c.parent %} <span class="text-gray-500 text-xs">in {{ c.parent }}</span>{% endif %}</a></li>
+    {% empty %}<li class="px-2 py-1 text-gray-500">No category matches "{{ query }}".</li>{% endfor %}
+  </ul>
+{% endif %}
