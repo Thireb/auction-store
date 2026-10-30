@@ -5,7 +5,12 @@
       <a href="{% url 'catalog:product_list' %}">All products</a>
       {% for cat in nav_categories %}<a href="{{ cat.get_absolute_url }}">{{ cat.name }}</a>{% endfor %}
     </nav>
+    <form action="{% url 'catalog:product_list' %}" method="get" class="hidden md:block ml-4">
+      <input type="search" name="q" placeholder="Search products" aria-label="Search products" class="border rounded px-2 py-1 text-sm">
+    </form>
     <div class="ml-auto flex items-center gap-4 text-sm">
+      <a href="{% url 'track_order' %}" class="hidden sm:inline">Track order</a>
+      {% if user.is_authenticated %}<a href="{% url 'accounts:account' %}">My account</a>{% else %}<a href="{% url 'accounts:login' %}">Log in</a>{% endif %}
       <a href="{% url 'cart:detail' %}" id="cart-link" class="font-medium">
         Cart (<span id="cart-count">{{ cart_count|default:0 }}</span>)
       </a>

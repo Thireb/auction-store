@@ -1,6 +1,9 @@
 <footer class="bg-white border-t mt-8">
   <div class="max-w-6xl mx-auto px-4 py-6 text-sm text-gray-600 flex flex-wrap gap-4 justify-between">
     <p>&copy; {% now "Y" %} {{ STORE_NAME }}. Cash on Delivery across Pakistan.</p>
-    <nav class="flex gap-4">{% block footer_links %}{% endblock %}</nav>
+    <nav class="flex flex-wrap gap-4">
+      <a href="{% url 'track_order' %}">Track order</a>
+      {% for p in footer_pages %}<a href="{{ p.get_absolute_url }}">{{ p.title }}</a>{% endfor %}
+    </nav>
   </div>
 </footer>

@@ -47,6 +47,8 @@ ROLES = {
         "orders.view_shipment",
         "orders.view_blockedphone",
         "orders.add_blockedphone",
+        "accounts.view_wholesaleprofile",
+        "accounts.change_wholesaleprofile",
         "shipping.view_city",
         "catalog.view_product",
         "catalog.view_variant",
