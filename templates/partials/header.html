@@ -6,7 +6,7 @@
       {% for cat in nav_categories %}<a href="{{ cat.get_absolute_url }}">{{ cat.name }}</a>{% endfor %}
     </nav>
     <div class="ml-auto flex items-center gap-4 text-sm">
-      <a href="#" id="cart-link" class="font-medium">
+      <a href="{% url 'cart:detail' %}" id="cart-link" class="font-medium">
         Cart (<span id="cart-count">{{ cart_count|default:0 }}</span>)
       </a>
       <button type="button" class="sm:hidden" @click="open = !open" aria-label="Menu">&#9776;</button>
