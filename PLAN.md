@@ -87,7 +87,9 @@ Apps: `catalog`, `inventory`, `cart`, `orders`, `shipping`, `accounts`, `core`.
 - **Brand** (optional): name, slug.
 - **Product**: title, slug, category, brand, description, condition (`new`, `open box`, `used - like new`, `used - good`, `damaged/as is`), origin note (for example "Dubai auction, lot 2024-17"), is_active, is_featured, created_at.
 - **ProductImage**: product, image, alt text, sort order.
-- **Attribute / AttributeValue**: free attributes per category (size, color, material, strap type). A JSON field on the product is a simpler first choice; we decide in phase 1.
+- **Attribute** (defined in the admin, no code): name, type (text, number, choice, yes/no), choices, unit, is_filterable, is_variant_option. Linked to 1 or more categories. A child category inherits the attributes of its parent.
+- **ProductAttributeValue**: product, attribute, value. The product form in the admin shows the attributes of the product category.
+- Result: the owner adds a new category (for example "Perfumes") and its attributes (for example "Volume (ml)") in the admin. The product form, the filters and the product page use them at once. **No code change for a new category.**
 - **Variant**: product, SKU, option values (for example size 42, black), price, compare-at price, weight. Each product has at least 1 variant. This keeps cart and stock logic the same for all items.
 
 ### 4.2 Bulk pricing and MOQ
@@ -198,7 +200,19 @@ Fake order protection (a large COD risk in Pakistan):
 - Order list with filters by status, city and date. Actions: confirm, mark packed, mark shipped (with tracking number), cancel.
 - Printable packing slip and invoice (HTML print view).
 - Simple dashboard: orders today, orders to confirm, low stock, COD amount pending from couriers.
-- **Owner account** (superuser) creates staff accounts and sets their group: Order manager, Inventory manager. Staff cannot create users.
+- **Everything is data in the admin.** Categories, attributes, brands, fees, bank details, home page banners, featured products and static pages are all edited in the admin. Code changes are only for new features.
+- **Owner account** (superuser) creates staff accounts. Staff cannot create or edit users.
+- **Roles are Django groups with ticked permissions.** The owner can change a role or make a new role in the admin, with no code. Default roles:
+
+  | Role | Can do | Cannot do |
+  |---|---|---|
+  | Inventory manager | Add and edit products, images, categories, attributes, brands. Receive stock into lots. | See cost and profit. Change prices (optional). Touch orders. Delete anything. |
+  | Order manager | See and update orders, confirm by phone, enter tracking, mark advance received, see customers. | Edit products or prices. Adjust stock by hand. Delete orders. |
+  | Owner | Everything. | - |
+
+- **Custom permissions** for sensitive actions, given per role or per person: `view_cost_and_profit`, `change_price`, `adjust_stock`, `approve_wholesale_buyer`, `cancel_confirmed_order`, `view_reports`.
+- **No hard delete for staff.** Products and categories are hidden with `is_active`. Orders are cancelled, never deleted. Only the owner can delete.
+- Every staff change is in the audit log (who, what, old value, new value, time).
 - **Staff activity page** for the owner: a list of all changes (who, what, when, old and new values) from `django-simple-history`, filtered by staff member and date. Each StockMovement also stores the user.
 - **Stock view** for the owner: all variants with on hand, reserved, available, lot and cost value.
 
