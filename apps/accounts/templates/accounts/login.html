@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Log in | {{ STORE_NAME }}{% endblock %}
+{% block content %}
+  <div class="max-w-md mx-auto bg-white border rounded p-6">
+    <h1 class="text-2xl font-bold mb-4">Log in</h1>
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<p class="text-red-600 text-sm">Your mobile number or password is not correct.</p>{% endif %}
+      {% for field in form %}
+        <div><label class="block text-sm font-medium" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>
+      {% endfor %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="px-4 py-2 rounded bg-black text-white">Log in</button>
+    </form>
+    <p class="mt-4 text-sm">No account? <a class="underline" href="{% url 'accounts:signup' %}">Create one</a>. You can also check out as a guest.</p>
+  </div>
+{% endblock %}

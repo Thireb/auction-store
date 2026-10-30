@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.number }} | {{ STORE_NAME }}{% endblock %}
+{% block content %}
+  <p class="mb-4 text-sm"><a class="underline" href="{% url 'accounts:account' %}">My account</a></p>
+  {% include "accounts/partials/order_status.html" %}
+{% endblock %}
