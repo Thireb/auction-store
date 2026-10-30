@@ -12,12 +12,8 @@
     </div>
   {% endif %}
 
-  <div id="product-grid" class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-    {% for product in products %}
-      {% include "catalog/partials/product_card.html" %}
-    {% empty %}
-      <p class="col-span-full text-gray-500">No products here yet.</p>
-    {% endfor %}
+  <div class="mt-6 grid md:grid-cols-4 gap-6">
+    <aside>{% include "catalog/partials/filters.html" %}</aside>
+    <div class="md:col-span-3">{% include "catalog/partials/results.html" %}</div>
   </div>
-  {% include "catalog/partials/pagination.html" %}
 {% endblock %}
