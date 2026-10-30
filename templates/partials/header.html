@@ -1,0 +1,15 @@
+<header class="bg-white border-b" x-data="{ open: false }">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+    <a href="{% url 'core:home' %}" class="font-bold text-lg">{{ STORE_NAME }}</a>
+    <nav class="hidden sm:flex gap-4 text-sm" id="main-nav">
+      {% block nav %}{% endblock %}
+    </nav>
+    <div class="ml-auto flex items-center gap-4 text-sm">
+      <a href="#" id="cart-link" class="font-medium">
+        Cart (<span id="cart-count">{{ cart_count|default:0 }}</span>)
+      </a>
+      <button type="button" class="sm:hidden" @click="open = !open" aria-label="Menu">&#9776;</button>
+    </div>
+  </div>
+  <nav class="sm:hidden px-4 pb-3 text-sm flex flex-col gap-2" x-show="open" x-cloak></nav>
+</header>
