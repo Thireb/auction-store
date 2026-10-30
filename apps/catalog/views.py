@@ -3,6 +3,7 @@ from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, render
 
 from .models import Category, Product, ProductImage, Variant
+from .pricing import buyer_is_wholesale, visible_tiers
 
 PAGE_SIZE = 24
 
@@ -12,7 +13,10 @@ def product_queryset():
         Product.objects.visible()
         .select_related("category", "brand")
         .prefetch_related(
-            Prefetch("variants", queryset=Variant.objects.filter(is_active=True)),
+            Prefetch(
+                "variants",
+                queryset=Variant.objects.filter(is_active=True).prefetch_related("price_tiers"),
+            ),
             Prefetch("images", queryset=ProductImage.objects.order_by("sort_order", "pk")),
         )
     )
@@ -43,6 +47,7 @@ def category_detail(request, slug):
 def product_detail(request, slug):
     product = get_object_or_404(product_queryset(), slug=slug)
     variants = product.active_variants()
+    wholesale = buyer_is_wholesale(request.user)
     context = {
         "product": product,
         "variants": variants,
@@ -52,6 +57,18 @@ def product_detail(request, slug):
                 "name": v.name,
                 "price": int(v.price),
                 "compare": int(v.compare_at_price) if v.compare_at_price else None,
+                "min_qty": v.min_order_qty,
+                "step": v.order_step,
+                "in_stock": v.in_stock,
+                "available": v.stock_available if v.track_stock else None,
+                "tiers": [
+                    {
+                        "min": t.min_quantity,
+                        "price": int(t.unit_price),
+                        "wholesale": t.wholesale_only,
+                    }
+                    for t in visible_tiers(v, wholesale)
+                ],
             }
             for v in variants
         ],

@@ -8,6 +8,7 @@ from .models import (
     Attribute,
     Brand,
     Category,
+    PriceTier,
     Product,
     ProductAttributeValue,
     ProductImage,
@@ -60,8 +61,31 @@ class BrandAdmin(OwnerDeleteMixin, admin.ModelAdmin):
     prepopulated_fields = {"slug": ["name"]}
 
 
+PRICE_PERM = "catalog.change_price"
+
+
+class PriceLockedForm(forms.ModelForm):
+    """Staff without the change_price permission set prices on new variants only."""
+
+    user = None
+    price_fields = ("price", "compare_at_price")
+
+    def clean(self):
+        data = super().clean()
+        if self.instance.pk and self.user and not self.user.has_perm(PRICE_PERM):
+            for name in self.price_fields:
+                if name in self.changed_data:
+                    self.add_error(name, "You do not have permission to change prices.")
+        return data
+
+
+def with_user(form_class, user):
+    return type(form_class.__name__, (form_class,), {"user": user})
+
+
 class VariantInline(admin.TabularInline):
     model = Variant
+    form = PriceLockedForm
     extra = 0
     min_num = 1
     fields = [
@@ -69,6 +93,8 @@ class VariantInline(admin.TabularInline):
         "name",
         "price",
         "compare_at_price",
+        "min_order_qty",
+        "order_step",
         "weight_grams",
         "track_stock",
         "stock_on_hand",
@@ -77,6 +103,32 @@ class VariantInline(admin.TabularInline):
         "sort_order",
     ]
     readonly_fields = ["stock_on_hand", "stock_reserved"]
+    show_change_link = True
+
+    def get_formset(self, request, obj=None, **kwargs):
+        kwargs["form"] = with_user(self.form, request.user)
+        return super().get_formset(request, obj, **kwargs)
+
+
+class PriceTierInline(admin.TabularInline):
+    model = PriceTier
+    extra = 1
+    fields = ["min_quantity", "unit_price", "wholesale_only"]
+
+    def _can_edit(self, request):
+        return request.user.has_perm(PRICE_PERM)
+
+    def has_add_permission(self, request, obj=None):
+        return self._can_edit(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self._can_edit(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return self._can_edit(request)
+
+    def has_view_permission(self, request, obj=None):
+        return True
 
 
 class LowStockFilter(admin.SimpleListFilter):
@@ -115,6 +167,12 @@ class VariantAdmin(OwnerDeleteMixin, SimpleHistoryAdmin):
     list_select_related = ["product"]
     readonly_fields = ["stock_on_hand", "stock_reserved"]
     autocomplete_fields = ["product"]
+    form = PriceLockedForm
+    inlines = [PriceTierInline]
+
+    def get_form(self, request, obj=None, **kwargs):
+        kwargs["form"] = with_user(self.form, request.user)
+        return super().get_form(request, obj, **kwargs)
 
     @admin.display(description="Available")
     def available(self, obj):
