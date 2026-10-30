@@ -110,6 +110,10 @@ STORE_NAME = env("STORE_NAME", default="Auction Store")
 # A sold-out product stays in lists with a "Sold" badge for this many days.
 SOLD_OUT_LISTED_DAYS = env.int("SOLD_OUT_LISTED_DAYS", default=7)
 
+# Fake order protection.
+MAX_OPEN_ORDERS_PER_PHONE = env.int("MAX_OPEN_ORDERS_PER_PHONE", default=3)
+MAX_ORDERS_PER_IP_PER_HOUR = env.int("MAX_ORDERS_PER_IP_PER_HOUR", default=5)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

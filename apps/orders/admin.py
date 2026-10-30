@@ -1,7 +1,7 @@
 from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
 
-from .models import Order, OrderItem
+from .models import BlockedPhone, Order, OrderItem
 
 
 class OrderItemInline(admin.TabularInline):
@@ -37,3 +37,9 @@ class OrderAdmin(SimpleHistoryAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
+
+
+@admin.register(BlockedPhone)
+class BlockedPhoneAdmin(admin.ModelAdmin):
+    list_display = ["phone", "reason", "created_at"]
+    search_fields = ["phone", "reason"]

@@ -9,7 +9,7 @@ from apps.catalog.models import ADVANCE_PERCENT
 from apps.catalog.tests.factories import CategoryFactory, ProductFactory, VariantFactory
 from apps.inventory import services as stock
 from apps.orders import services
-from apps.orders.models import Order
+from apps.orders.models import BlockedPhone, Order
 from apps.shipping.models import City, ShippingSettings
 
 pytestmark = pytest.mark.django_db
@@ -162,6 +162,33 @@ def test_upload_advance_proof(client, city, tmp_path, settings):
     assert response.status_code == 302
     order.refresh_from_db()
     assert order.advance_proof
+
+
+def test_blocked_phone_cannot_order(client, city, watch):
+    BlockedPhone.objects.create(phone="+923001234567", reason="Refused 3 parcels")
+    fill_cart(client, watch)
+    response = client.post(reverse("orders:checkout"), checkout_data(city))
+    assert "cannot take orders from this number" in response.content.decode()
+    assert not Order.objects.exists()
+
+
+def test_open_order_limit_per_phone(client, city, watch, settings):
+    settings.MAX_OPEN_ORDERS_PER_PHONE = 1
+    fill_cart(client, watch)
+    client.post(reverse("orders:checkout"), checkout_data(city))
+    fill_cart(client, watch)
+    response = client.post(reverse("orders:checkout"), checkout_data(city))
+    assert "already has orders in progress" in response.content.decode()
+    assert Order.objects.count() == 1
+
+
+def test_orders_per_ip_limit(client, city, watch, settings):
+    settings.MAX_ORDERS_PER_IP_PER_HOUR = 1
+    fill_cart(client, watch)
+    client.post(reverse("orders:checkout"), checkout_data(city))
+    fill_cart(client, watch)
+    response = client.post(reverse("orders:checkout"), checkout_data(city, phone="03111234567"))
+    assert "Too many orders" in response.content.decode()
 
 
 def test_city_without_cod_is_not_offered(client, city, watch):
