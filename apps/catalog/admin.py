@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin
+from django.db.models import F
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -63,7 +64,61 @@ class VariantInline(admin.TabularInline):
     model = Variant
     extra = 0
     min_num = 1
-    fields = ["sku", "name", "price", "compare_at_price", "weight_grams", "is_active", "sort_order"]
+    fields = [
+        "sku",
+        "name",
+        "price",
+        "compare_at_price",
+        "weight_grams",
+        "track_stock",
+        "stock_on_hand",
+        "stock_reserved",
+        "is_active",
+        "sort_order",
+    ]
+    readonly_fields = ["stock_on_hand", "stock_reserved"]
+
+
+class LowStockFilter(admin.SimpleListFilter):
+    title = "stock"
+    parameter_name = "stock"
+
+    def lookups(self, request, model_admin):
+        return [("low", "Low stock"), ("out", "Out of stock")]
+
+    def queryset(self, request, queryset):
+        if self.value() not in ("low", "out"):
+            return None
+        available = F("stock_on_hand") - F("stock_reserved")
+        queryset = queryset.filter(track_stock=True).annotate(available_qty=available)
+        if self.value() == "low":
+            return queryset.filter(available_qty__lte=F("low_stock_threshold"), available_qty__gt=0)
+        return queryset.filter(available_qty__lte=0)
+
+
+@admin.register(Variant)
+class VariantAdmin(OwnerDeleteMixin, SimpleHistoryAdmin):
+    """The stock view: every variant with its stock numbers."""
+
+    list_display = [
+        "sku",
+        "__str__",
+        "price",
+        "stock_on_hand",
+        "stock_reserved",
+        "available",
+        "low_stock_threshold",
+        "is_active",
+    ]
+    list_filter = [LowStockFilter, "is_active", "track_stock", "product__category"]
+    search_fields = ["sku", "name", "product__title"]
+    list_select_related = ["product"]
+    readonly_fields = ["stock_on_hand", "stock_reserved"]
+    autocomplete_fields = ["product"]
+
+    @admin.display(description="Available")
+    def available(self, obj):
+        return obj.stock_available if obj.track_stock else "-"
 
 
 class ProductImageInline(admin.TabularInline):
