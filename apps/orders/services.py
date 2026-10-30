@@ -13,7 +13,7 @@ from apps.inventory import services as stock
 from apps.shipping.models import ShippingSettings
 from apps.shipping.services import quote
 
-from .models import BlockedPhone, Order, OrderItem
+from .models import BlockedPhone, Order, OrderItem, OrderStatusHistory
 
 
 class CheckoutError(Exception):
@@ -134,5 +134,8 @@ def place_order(cart, customer, *, user=None, ip_address=None):
             line_total=line.line_total,
             advance_amount=line_advance(line.product, line.unit_price, line.quantity),
         )
+    OrderStatusHistory.objects.create(
+        order=order, from_status=order.status, to_status=order.status, note="Order placed"
+    )
     cart.clear()
     return order
