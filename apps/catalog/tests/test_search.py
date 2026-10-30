@@ -85,3 +85,18 @@ def test_pagination_keeps_filters(client, catalog, settings):
     finally:
         views.PAGE_SIZE = old
     assert "?q=watch&amp;page=2" in content
+
+
+def test_search_leaves_out_products_that_do_not_match(client, catalog):
+    # Postgres ranks a row that does not match at 1e-20, not 0.
+    other = BrandFactory(name="Philips")
+    ProductFactory(
+        title="Philips air fryer", brand=other, description="Air fryer. Checked by our team."
+    )
+    ProductFactory(
+        title="Baseus power bank",
+        brand=BrandFactory(name="Baseus"),
+        description="Checked by our team.",
+    )
+    url = reverse("catalog:product_list")
+    assert titles(client.get(url, {"q": "air fryer"})) == {"Philips air fryer"}

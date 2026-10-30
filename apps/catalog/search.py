@@ -36,8 +36,9 @@ def filter_products(products, params, category=None):
             + SearchVector("description", weight="C")
         )
         query = SearchQuery(q, search_type="websearch")
-        products = products.annotate(rank=SearchRank(vector, query)).filter(
-            Q(rank__gt=0) | Q(title__icontains=q) | Q(variants__sku__iexact=q)
+        # Match with the @@ operator: ts_rank gives 1e-20, not 0, to rows that do not match.
+        products = products.annotate(search=vector, rank=SearchRank(vector, query)).filter(
+            Q(search=query) | Q(title__icontains=q) | Q(variants__sku__iexact=q)
         )
 
     low, high = _int(params.get("min_price")), _int(params.get("max_price"))
