@@ -1,0 +1,38 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a> &rsaquo;
+  <a href="{% url 'admin:catalog_product_changelist' %}">Products</a> &rsaquo; Import CSV
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>Import products and stock from CSV</h1>
+<p>One row is one variant. Rows with the same title and category become one product.
+   A row with an SKU that exists only adds stock. Categories and attributes must exist first.
+   Save your Excel sheet as "CSV UTF-8".</p>
+<p><a href="?template=1">Download a template CSV</a></p>
+
+{% if result %}
+  {% if result.errors %}
+    <p class="errornote">Nothing was imported. Fix these rows and try again.</p>
+    <table>
+      <thead><tr><th>Line</th><th>Problem</th></tr></thead>
+      <tbody>{% for line, message in result.errors %}<tr><td>{{ line }}</td><td>{{ message }}</td></tr>{% endfor %}</tbody>
+    </table>
+  {% else %}
+    <ul class="messagelist"><li class="{% if dry_run %}info{% else %}success{% endif %}">
+      {% if dry_run %}Check passed. Import would create{% else %}Imported:{% endif %}
+      {{ result.products_created }} products, {{ result.variants_created }} variants, {{ result.stock_rows }} stock rows.
+      {% if dry_run %}Untick "Check only" and upload again to import.{% endif %}
+    </li></ul>
+  {% endif %}
+{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <input type="submit" value="Upload" class="default">
+</form>
+{% endblock %}
