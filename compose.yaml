@@ -1,0 +1,37 @@
+# Local development. Production on PetHost uses pethost.compose.yaml (phase 7).
+services:
+  web:
+    build:
+      context: .
+      args:
+        REQUIREMENTS: requirements-dev.txt
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DATABASE_URL: postgres://${POSTGRES_USER:-auction_store}:${POSTGRES_PASSWORD:-auction_store}@db:5432/${POSTGRES_DB:-auction_store}
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - media:/data/media
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-auction_store}
+      POSTGRES_USER: ${POSTGRES_USER:-auction_store}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-auction_store}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  media:
