@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a> &rsaquo;
+  <a href="{% url 'admin:orders_order_changelist' %}">Orders</a> &rsaquo;
+  <a href="{% url 'admin:orders_order_change' order.pk %}">{{ order.number }}</a> &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p>{{ order.full_name }}, {{ order.phone_display }}, {{ order.city_name }}. Total Rs {{ order.total }}.</p>
+{% if target == "cancelled" %}<p>Cancelling gives the reserved stock back.</p>{% endif %}
+{% if target == "shipped" %}<p>Shipping removes the items from stock.</p>{% endif %}
+{% if target == "returned" %}<p>The items go back into stock. Check them first.</p>{% endif %}
+<form method="post">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="errornote">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+  {% if needs_courier %}
+    <p><label>Courier: {{ form.courier }}</label></p>
+    <p><label>Tracking number: {{ form.tracking_number }}</label></p>
+  {% endif %}
+  <p><label>Note: {{ form.note }}</label></p>
+  <input type="submit" class="default" value="Save">
+  <a href="{% url 'admin:orders_order_change' order.pk %}">Back</a>
+</form>
+{% endblock %}
