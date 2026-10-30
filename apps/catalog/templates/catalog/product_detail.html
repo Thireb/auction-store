@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load money %}
+
+{% block title %}{{ product.title }} | {{ STORE_NAME }}{% endblock %}
+{% block meta_description %}{{ product.description|truncatewords:30 }}{% endblock %}
+
+{% block content %}
+  {% include "catalog/partials/breadcrumbs.html" %}
+  <div class="grid md:grid-cols-2 gap-8">
+    <div x-data="{ current: 0 }">
+      <div class="aspect-square bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+        {% for image in images %}
+          <img x-show="current === {{ forloop.counter0 }}" {% if not forloop.first %}x-cloak{% endif %}
+               src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.title }}" class="object-contain w-full h-full">
+        {% empty %}
+          <span class="text-gray-400">No image</span>
+        {% endfor %}
+      </div>
+      {% if images|length > 1 %}
+        <div class="mt-2 flex gap-2 overflow-x-auto">
+          {% for image in images %}
+            <button type="button" @click="current = {{ forloop.counter0 }}"
+                    :class="current === {{ forloop.counter0 }} ? 'ring-2 ring-black' : ''" class="w-16 h-16 shrink-0 rounded overflow-hidden">
+              <img src="{{ image.image.url }}" alt="" class="object-cover w-full h-full">
+            </button>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div x-data="{ variants: JSON.parse(document.getElementById('variant-data').textContent), selected: 0 }">
+      {{ variant_data|json_script:"variant-data" }}
+      <h1 class="text-2xl font-bold">{{ product.title }}</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        {{ product.get_condition_display }}{% if product.brand %} · {{ product.brand.name }}{% endif %}{% if product.origin_note %} · {{ product.origin_note }}{% endif %}
+      </p>
+
+      {% if variants %}
+        <p class="mt-4 text-2xl font-semibold" id="price">
+          <span x-text="'Rs ' + variants[selected].price.toLocaleString('en-US')">{{ variants.0.price|rupees }}</span>
+          <s class="text-base text-gray-400" x-show="variants[selected].compare" x-cloak
+             x-text="variants[selected].compare ? 'Rs ' + variants[selected].compare.toLocaleString('en-US') : ''"></s>
+        </p>
+        {% if variants|length > 1 %}
+          <label class="block mt-4 text-sm font-medium" for="variant-select">Option</label>
+          <select id="variant-select" class="mt-1 border rounded px-3 py-2 bg-white" x-model.number="selected">
+            {% for v in variants %}<option value="{{ forloop.counter0 }}">{{ v.name|default:v.sku }}</option>{% endfor %}
+          </select>
+        {% endif %}
+        <div id="buy-box" class="mt-6">
+          {% block buy_box %}<p class="text-sm text-gray-500">Ordering opens soon.</p>{% endblock %}
+        </div>
+      {% else %}
+        <p class="mt-4 text-gray-500">Not available.</p>
+      {% endif %}
+
+      <p class="mt-6 text-sm">Cash on Delivery across Pakistan.</p>
+
+      {% if attributes %}
+        <table class="mt-6 text-sm w-full">
+          {% for attribute, value in attributes %}
+            <tr class="border-t"><th class="text-left py-1 pr-4 font-medium">{{ attribute.name }}</th><td>{{ value }}{% if attribute.unit %} {{ attribute.unit }}{% endif %}</td></tr>
+          {% endfor %}
+        </table>
+      {% endif %}
+
+      {% if product.description %}<div class="mt-6 text-sm whitespace-pre-line">{{ product.description }}</div>{% endif %}
+    </div>
+  </div>
+{% endblock %}

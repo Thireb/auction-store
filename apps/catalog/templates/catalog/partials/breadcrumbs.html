@@ -1,0 +1,4 @@
+<nav class="text-sm text-gray-500 mb-4">
+  <a href="{% url 'catalog:product_list' %}">All products</a>
+  {% for crumb in breadcrumbs %} / <a href="{{ crumb.get_absolute_url }}">{{ crumb.name }}</a>{% endfor %}
+</nav>
