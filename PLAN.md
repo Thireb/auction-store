@@ -1,6 +1,21 @@
 # Auction Store: Project Plan
 
-Status: **draft for review**. No code is written until Ahmad approves this plan.
+Status: **draft for review, answers included (2026-10-30)**. No code is written until Ahmad approves this plan.
+
+## 0. Decisions from Ahmad
+
+| Topic | Decision |
+|---|---|
+| Hosting | Build and finish the app locally first. Then deploy to the PetHost $12 plan. |
+| Accounts | Guest checkout. At checkout, a "Create an account" checkbox makes an account from the same form data. |
+| Bulk pricing | Both: price tiers per product for everyone, and approved wholesale buyers. Bulk is mostly for mobile accessories. Most items are normal "add quantity to cart". |
+| Stock | A mix of one-off pieces and repeated stock. |
+| Delivery | Not decided yet (depends on a courier partner). Fees must be configurable. Advance payment (full or part) is possible for large items. |
+| Confirmation | Staff call the customer. Leave room for WhatsApp. **No paid services** for now. |
+| Language | English only. |
+| Currency | PKR only. No tax on invoices for now. |
+| Staff | Staff add products and images. An owner (admin) account creates staff accounts and can see what each staff member did and all stock. |
+| Returns | No return policy now. Focus on a functional store. |
 
 ## 1. Goal
 
@@ -21,7 +36,8 @@ The first UI is minimal and only for tests. A real design comes later. So all te
 | Image handling | Pillow + `django-imagekit` (or `sorl-thumbnail`) | Makes thumbnails. Phone photos are large. |
 | App server | Gunicorn | Standard for Django in a container. |
 | Back office | Django admin, with `django-import-export` | Fast to build. CSV/Excel import for large auction lots. |
-| Background jobs | None in phase 1. Later: `django-q2` or `huey` with the DB as broker | No Redis or Celery is assumed. Add only if WhatsApp/SMS sends need it. |
+| Background jobs | None | No Redis or Celery. Nothing in the app needs a queue now. |
+| Audit log | `django-simple-history` (history on products, variants, stock, orders) + Django admin log | The owner sees who changed what and when. Free and runs in the same DB. |
 | Tests | `pytest`, `pytest-django`, `factory_boy` | Fast unit and view tests. |
 | Lint and format | `ruff` | One tool for lint and format. |
 | CI | GitHub Actions: ruff + pytest on every PR | Catches errors before a merge. |
@@ -29,6 +45,8 @@ The first UI is minimal and only for tests. A real design comes later. So all te
 **Suggestion:** keep the stack above. It fits Django + HTMX + Alpine well and needs no Node build. Do not use a SPA framework.
 
 ## 3. Hosting on PetHost
+
+All development and tests run locally first with Docker Compose (the same `compose.yaml`). The deploy to the PetHost $12 plan comes last (phase 7), when the app is complete. A small plan is enough for one Django container and one Postgres container, but we keep Gunicorn at 2 workers and check memory at deploy time.
 
 PetHost (the hosting connected to this account) runs **Docker Compose projects on one rented Linux machine**. It is not shared cPanel hosting. This removes the usual shared hosting limits:
 
@@ -77,7 +95,8 @@ Apps: `catalog`, `inventory`, `cart`, `orders`, `shipping`, `accounts`, `core`.
 - **PriceTier**: variant, min_quantity, unit_price. Example: 1-9 pcs at Rs 1,200, 10-49 at Rs 1,000, 50+ at Rs 850.
 - **Variant.min_order_qty** (MOQ) and **Variant.order_step** (for example sold in packs of 12).
 - The cart always calculates the unit price from the highest tier the quantity reaches.
-- Optional (answer to question 3): **wholesale buyers**. A customer applies, an admin approves, and only approved buyers see wholesale tiers.
+- **Wholesale buyers** (decided: yes). A customer with an account applies (business name, city, phone). Staff approve or reject. A PriceTier has a flag `wholesale_only`. Only approved buyers see and get those tiers. Normal buyers still get public tiers.
+- Most products have no tiers. They are simple "add quantity to cart" items. Bulk tiers are mainly for mobile accessories.
 
 ### 4.3 Lots and stock
 
@@ -91,15 +110,29 @@ Stock rule: the store **reserves stock when the order is placed**. It releases s
 ### 4.4 Customers
 
 - Guest checkout with name, phone and address (most COD buyers in Pakistan expect this).
-- Optional account: login by phone + password, or phone OTP later. Saves addresses and shows order history.
+- At checkout, a **"Create an account"** checkbox. When checked (Alpine shows a password field), the store creates an account from the checkout data and links the order to it.
+- Account login by phone (or email) + password. No OTP (SMS costs money). Saves addresses and shows order history.
 - **Address**: name, phone, city, area, street address, nearest landmark, postal code (optional).
 - **Phone** is the main key. Store it in `+92 3XX XXXXXXX` format and validate it.
 
 ### 4.5 Shipping
 
-- **City**: name, province, is_active, delivery_fee, cod_fee, estimated days, courier, is_cod_allowed.
-- **ShippingRule** (optional): extra fee by weight or for bulky items (furniture). Free delivery above an order total.
-- **Shipment**: order, courier, tracking number, booked_at, status. Phase 1 enters tracking numbers by hand. Courier APIs (PostEx, Leopards, TCS, Trax, M&P) come in a later phase.
+The courier is not decided yet. So all fees are data in the admin, not code:
+
+- **ShippingSettings** (one row): default delivery fee, default COD fee, free delivery above an order total.
+- **City**: name, province, is_active, is_cod_allowed. Optional fee overrides. A city without overrides uses the defaults.
+- **Bulky flag** on a product or category (furniture): extra delivery fee and "advance required" rules.
+- **Shipment**: order, courier name (free text), tracking number, booked_at, status. Staff enter it by hand. A courier API comes after a partner is chosen.
+
+### 4.5.1 Advance payment
+
+For large items the store can ask for an advance. No payment gateway is used.
+
+- Rules: per product or category, `advance_type` = none, fixed amount, or percent of the price. Also an optional rule "advance for orders above Rs X".
+- Checkout shows the advance amount and the store bank / Easypaisa / JazzCash account details (from the admin settings).
+- The customer uploads a screenshot of the transfer (optional at checkout, or later from the order tracking page).
+- Staff check it and mark the advance as received. The rest is COD.
+- Order fields: advance_required, advance_amount, advance_status (`not_required`, `pending`, `received`), advance_proof image.
 
 ### 4.6 Orders
 
@@ -118,20 +151,21 @@ pending_confirmation -> confirmed -> packed -> shipped -> delivered -> completed
 
 | Status | Meaning | Stock |
 |---|---|---|
-| `pending_confirmation` | Customer placed the order. Staff must confirm it by phone or WhatsApp. | Reserved |
+| `pending_confirmation` | Customer placed the order. Staff must confirm it by phone (or WhatsApp click-to-chat). | Reserved |
+| `awaiting_advance` | Only for orders that need an advance. Waits for staff to check the transfer. | Reserved |
 | `confirmed` | Customer confirmed address and intent. | Reserved |
 | `packed` | Items packed. | Reserved |
 | `shipped` | Handed to the courier. Tracking number entered. | Deducted |
 | `delivered` | Courier delivered and collected cash. | Deducted |
 | `completed` | Courier paid the COD amount to us (cash reconciled). | Deducted |
 | `cancelled` | Customer or staff cancelled before dispatch. | Released |
-| `returned` | Customer refused or courier failed. Items came back. | Back in stock after check |
+| `returned` | Customer refused the COD parcel or the courier failed. Items came back. (This is not a return policy. It is a normal COD event.) | Back in stock after check |
 
 Fake order protection (a large COD risk in Pakistan):
 
 - Phone confirmation before dispatch (staff call, or WhatsApp "reply 1 to confirm").
 - Limit open orders per phone number. Block a phone or IP after many refusals.
-- Optional advance payment for large bulk orders or furniture (answer needed, see question 5). This is not COD, so it needs your decision.
+- Advance payment for large items (section 4.5.1).
 - Rate limit on the checkout view.
 
 ## 6. Cart and checkout
@@ -145,9 +179,9 @@ Fake order protection (a large COD risk in Pakistan):
 
 ## 7. Order confirmation and notifications
 
-- Phase 1: staff confirm by phone. Admin shows a "click to WhatsApp" link (`https://wa.me/92...`) with a pre-filled message.
-- Later phase: WhatsApp Cloud API template messages for "order received", "shipped" and "delivered", or an SMS gateway (for example a local SMS provider). This needs a Meta business account.
-- Email to the store owner for each new order.
+- Staff confirm by phone. The admin order page shows the phone as a `tel:` link and a free "click to WhatsApp" link (`https://wa.me/92...`) with a pre-filled message.
+- No paid service (no SMS gateway, no paid WhatsApp API). A `notifications` module with one function per event keeps room to add WhatsApp later without changes in other code.
+- Email to the store owner for each new order, through any SMTP account (free). If no SMTP is set, the store skips the email.
 
 ## 8. Search and filters
 
@@ -164,14 +198,16 @@ Fake order protection (a large COD risk in Pakistan):
 - Order list with filters by status, city and date. Actions: confirm, mark packed, mark shipped (with tracking number), cancel.
 - Printable packing slip and invoice (HTML print view).
 - Simple dashboard: orders today, orders to confirm, low stock, COD amount pending from couriers.
-- Staff roles with Django groups: Owner, Order manager, Inventory manager.
+- **Owner account** (superuser) creates staff accounts and sets their group: Order manager, Inventory manager. Staff cannot create users.
+- **Staff activity page** for the owner: a list of all changes (who, what, when, old and new values) from `django-simple-history`, filtered by staff member and date. Each StockMovement also stores the user.
+- **Stock view** for the owner: all variants with on hand, reserved, available, lot and cost value.
 
 ## 10. Other parts
 
 - **Currency**: PKR only. Show prices as `Rs 1,250`. Store money as `DecimalField` with 0 decimals, or as whole rupees.
-- **Language**: English first. Use Django `gettext` in templates from the start so Urdu can come later.
+- **Language**: English only. No translation work.
 - **SEO**: slugs, meta title and description, sitemap.xml, robots.txt, Open Graph tags for WhatsApp and Facebook shares.
-- **Static pages**: About, Contact, Delivery and Returns policy, FAQ.
+- **Static pages**: About, Contact, Delivery info, FAQ. Editable in the admin. No return policy page now.
 - **Security**: CSRF on all forms, `DEBUG=False` in production, secure cookies, admin at a non-default URL, rate limits.
 - **Analytics** (later): Meta Pixel and Google Analytics, because ads drive most traffic in this market.
 
@@ -197,7 +233,7 @@ Fake order protection (a large COD risk in Pakistan):
 - Write this plan. Get answers to the open questions.
 
 ### Phase 1: Foundation
-1. Django project skeleton, settings split (base, dev, prod), `.env` with `django-environ`, ruff, pytest.
+1. Django project skeleton, settings split (base, dev, prod), `.env` with `django-environ`, ruff, pytest. Owner superuser and staff groups.
 2. Docker setup: `Dockerfile`, `compose.yaml` for local and PetHost, Postgres, WhiteNoise.
 3. Base templates: Tailwind CDN, HTMX, Alpine, header with cart count, footer.
 4. GitHub Actions CI.
@@ -209,49 +245,41 @@ Fake order protection (a large COD risk in Pakistan):
 
 ### Phase 3: Inventory and bulk pricing
 1. Lot, StockItem, StockMovement models and admin.
-2. PriceTier, MOQ and order step, with price calculation service and tests.
+2. PriceTier (public and wholesale-only), MOQ and order step, with price calculation service and tests.
 3. One-off item "Sold" behavior. Low stock list.
 4. CSV/Excel import for products and stock.
 
 ### Phase 4: Cart and checkout
 1. Session cart with HTMX updates and tier pricing.
-2. City model with delivery and COD fees.
-3. Checkout form, order creation with stock reservation, thank you page.
+2. ShippingSettings and City models with configurable fees. Advance payment rules.
+3. Checkout form with "Create an account" checkbox, order creation with stock reservation, advance proof upload, thank you page.
 4. Fake order protections (limits, rate limit, blocklist).
 
 ### Phase 5: Order management
 1. Order status machine with history and stock effects.
-2. Admin order actions, packing slip and invoice print view.
+2. Admin order actions (including "advance received"), packing slip and invoice print view.
 3. WhatsApp click-to-chat confirm link. New order email to owner.
-4. Dashboard numbers.
+4. Owner dashboard, staff activity page (`django-simple-history`), stock view.
 
 ### Phase 6: Customers, search and content
-1. Optional accounts (phone login), saved addresses, order history, order tracking page by number + phone.
+1. Accounts (login, saved addresses, order history), wholesale buyer application and approval, order tracking page by number + phone.
 2. Full-text search, filters and sort with HTMX.
 3. Static pages, SEO basics, sitemap.
 
-### Phase 7: Deploy to PetHost
+### Phase 7: Deploy to PetHost ($12 plan, after the app is complete and tested locally)
 1. Production settings, Gunicorn, health check view.
 2. Media serving and volumes, nightly `pg_dump`.
 3. First deploy, domain, smoke test on the live URL.
 
 ### Phase 8: Later (after real use)
-- Courier API booking and tracking (PostEx, Leopards, TCS).
-- WhatsApp Cloud API or SMS notifications.
-- Wholesale buyer accounts (if not in phase 3).
-- Urdu translation.
+- Courier API booking and tracking, after a partner is chosen.
+- WhatsApp or SMS messages, only if a paid service is approved later.
 - Real UI design.
 - Reports: profit per lot, sales per category, COD reconciliation.
 
-## 14. Open questions for Ahmad
+## 14. Open questions
 
-1. **PetHost**: Is it the Docker machine connected to this account? Which plan size (CPU, RAM, disk)? Do you have a domain name?
-2. **Accounts**: Guest checkout only, or guest checkout plus optional accounts?
-3. **Bulk pricing**: Price tiers per product for everyone, or wholesale buyers who need approval? Or both?
-4. **Stock type**: Are most items one-off lots (1 piece each), repeated stock (many of the same), or a mix?
-5. **Delivery**: Flat fee, fee per city, or courier rates by weight? Which courier(s) do you use (TCS, Leopards, PostEx, Trax, M&P, own rider)? Do you want an advance payment for large or furniture orders?
-6. **Confirmation**: Phone call by staff, WhatsApp, or SMS? Do you have a WhatsApp Business account?
-7. **Language**: English only, or English and Urdu?
-8. **Money and invoices**: PKR only? Do you need tax (GST/FBR) on invoices, or a simple invoice?
-9. **Team**: Who adds products and images, and who handles orders? How many staff accounts?
-10. **Returns**: What is your return or exchange policy for used and auction items?
+All 10 first questions are answered (section 0). Still open, not blocking:
+
+1. The delivery partner and its fee model. The store keeps fees configurable until then.
+2. The bank / Easypaisa / JazzCash details for advance payments. These go in the admin settings.
