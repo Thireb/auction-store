@@ -14,3 +14,16 @@ def test_seed_demo_runs_twice_without_duplicates(settings, tmp_path):
     assert Product.objects.count() == products
     assert Category.objects.count() == categories
     assert all(p.variants.exists() and p.images.exists() for p in Product.objects.all())
+
+
+@pytest.mark.django_db
+def test_setup_store_adds_no_products():
+    from apps.core.models import Page
+    from apps.shipping.models import City, ShippingSettings
+
+    call_command("setup_store")
+    call_command("setup_store")
+    assert City.objects.count() > 50
+    assert Page.objects.count() == 4
+    assert ShippingSettings.objects.count() == 1
+    assert not Product.objects.exists()

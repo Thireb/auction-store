@@ -1,6 +1,6 @@
 # Auction Store: Project Plan
 
-Status: **approved by Ahmad on 2026-10-30**.
+Status: **approved by Ahmad on 2026-10-30**. Phases 1 to 6 are built. Phase 7 has the production files; the first deploy waits for the PetHost plan.
 
 ## 0. Decisions from Ahmad
 
