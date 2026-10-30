@@ -65,3 +65,19 @@ def test_visible_hides_inactive_products_and_categories():
     ProductFactory(is_active=False)
     ProductFactory(category=CategoryFactory(is_active=False))
     assert list(Product.objects.visible()) == [shown]
+
+
+def test_bulky_and_advance_rules_inherit_from_category():
+    from apps.catalog.models import ADVANCE_FIXED, ADVANCE_NONE, ADVANCE_PERCENT
+
+    furniture = CategoryFactory(is_bulky=True, advance_type=ADVANCE_PERCENT, advance_value=20)
+    sofas = CategoryFactory(parent=furniture)
+    sofa = ProductFactory(category=sofas)
+    assert sofa.bulky
+    assert sofa.advance_rule() == (ADVANCE_PERCENT, 20)
+
+    sofa.is_bulky, sofa.advance_type, sofa.advance_value = False, ADVANCE_FIXED, 5000
+    assert not sofa.bulky
+    assert sofa.advance_rule() == (ADVANCE_FIXED, 5000)
+
+    assert ProductFactory().advance_rule() == (ADVANCE_NONE, 0)

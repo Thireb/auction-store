@@ -40,6 +40,14 @@ class SluggedModel(models.Model):
         super().save(*args, **kwargs)
 
 
+ADVANCE_NONE, ADVANCE_FIXED, ADVANCE_PERCENT = "none", "fixed", "percent"
+ADVANCE_CHOICES = [
+    (ADVANCE_NONE, "No advance"),
+    (ADVANCE_FIXED, "Fixed amount per piece"),
+    (ADVANCE_PERCENT, "Percent of the price"),
+]
+
+
 class Category(SluggedModel):
     name = models.CharField(max_length=120)
     parent = models.ForeignKey(
@@ -49,6 +57,13 @@ class Category(SluggedModel):
     image = models.ImageField(upload_to="categories/", blank=True)
     sort_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    is_bulky = models.BooleanField(
+        default=False, help_text="Large items (furniture). Adds the bulky item delivery fee."
+    )
+    advance_type = models.CharField(max_length=10, choices=ADVANCE_CHOICES, default=ADVANCE_NONE)
+    advance_value = models.PositiveIntegerField(
+        default=0, help_text="Rupees per piece, or a percent, by the advance type."
+    )
     history = HistoricalRecords()
 
     class Meta:
@@ -88,6 +103,14 @@ class Category(SluggedModel):
             )
             ids.extend(frontier)
         return ids
+
+    def nearest_with(self, field, empty):
+        """This category or the nearest parent where `field` is not `empty`, else None."""
+        for category in reversed(self.ancestors(include_self=True)):
+            value = getattr(category, field)
+            if value != empty:
+                return category
+        return None
 
     def all_attributes(self):
         """Attributes of this category and of all its parents."""
@@ -196,6 +219,16 @@ class Product(SluggedModel):
     )
     is_active = models.BooleanField(default=True, help_text="Untick to hide from the store.")
     is_featured = models.BooleanField(default=False)
+    is_bulky = models.BooleanField(
+        null=True, blank=True, help_text="Empty uses the category setting."
+    )
+    advance_type = models.CharField(
+        max_length=10,
+        choices=ADVANCE_CHOICES,
+        blank=True,
+        help_text="Empty uses the category setting.",
+    )
+    advance_value = models.PositiveIntegerField(default=0)
     sold_out_at = models.DateTimeField(
         null=True, blank=True, editable=False, help_text="Set when the last piece is sold."
     )
@@ -225,6 +258,21 @@ class Product(SluggedModel):
 
     def active_variants(self):
         return [v for v in self.variants.all() if v.is_active]
+
+    @property
+    def bulky(self):
+        if self.is_bulky is not None:
+            return self.is_bulky
+        return any(c.is_bulky for c in self.category.ancestors(include_self=True))
+
+    def advance_rule(self):
+        """(advance_type, advance_value) from the product, else the nearest category."""
+        if self.advance_type:
+            return self.advance_type, self.advance_value
+        source = self.category.nearest_with("advance_type", ADVANCE_NONE)
+        if source is None:
+            return ADVANCE_NONE, 0
+        return source.advance_type, source.advance_value
 
     @property
     def is_sold_out(self):

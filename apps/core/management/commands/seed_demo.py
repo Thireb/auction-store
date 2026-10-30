@@ -3,6 +3,7 @@ from django.db import transaction
 
 from apps.catalog.demo import seed_catalog
 from apps.inventory.demo import seed_inventory
+from apps.shipping.demo import seed_shipping
 
 
 class Command(BaseCommand):
@@ -12,4 +13,5 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         seed_catalog(self.stdout)
         seed_inventory(self.stdout)
+        seed_shipping(self.stdout)
         self.stdout.write(self.style.SUCCESS("Demo data is ready."))

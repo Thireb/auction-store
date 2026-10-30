@@ -248,6 +248,14 @@ class ProductAdmin(OwnerDeleteMixin, SimpleHistoryAdmin):
     base_fieldsets = [
         (None, {"fields": ["title", "slug", "category", "brand", "condition", "description"]}),
         ("Store", {"fields": ["is_active", "is_featured", "origin_note"]}),
+        (
+            "Delivery and advance",
+            {
+                "fields": ["is_bulky", "advance_type", "advance_value"],
+                "classes": ["collapse"],
+                "description": "Leave empty to use the category settings.",
+            },
+        ),
     ]
 
     def _attributes(self, obj):
