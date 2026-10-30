@@ -14,9 +14,8 @@
       {% if original.advance_status == "pending" %}
         &nbsp;· Advance Rs {{ original.advance_amount }} pending
         {% if can_mark_advance %}
-          <form method="post" action="{% url 'admin:orders_order_advance' original.pk %}" style="display:inline">
-            {% csrf_token %}<button type="submit" class="button">Mark advance received</button>
-          </form>
+          {# This block is inside the admin change form, so the button posts that form to another URL. #}
+          <button type="submit" class="button" formaction="{% url 'admin:orders_order_advance' original.pk %}" formnovalidate>Mark advance received</button>
         {% endif %}
       {% endif %}
       {% if transitions %}
