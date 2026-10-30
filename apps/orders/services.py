@@ -1,8 +1,11 @@
 """Order creation. Order status changes come in phase 5 (apps/orders/workflow.py)."""
 
+from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 
 from apps.catalog import pricing
 from apps.catalog.models import ADVANCE_FIXED, ADVANCE_PERCENT
@@ -10,7 +13,7 @@ from apps.inventory import services as stock
 from apps.shipping.models import ShippingSettings
 from apps.shipping.services import quote
 
-from .models import Order, OrderItem
+from .models import BlockedPhone, Order, OrderItem
 
 
 class CheckoutError(Exception):
@@ -57,6 +60,23 @@ def summarize(cart, city, shipping_settings=None):
     }
 
 
+def check_customer_limits(phone, ip_address):
+    if BlockedPhone.objects.filter(phone=phone).exists():
+        raise CheckoutError(
+            "We cannot take orders from this number online. Please contact us by phone."
+        )
+    open_orders = Order.objects.filter(phone=phone, status__in=Order.OPEN_STATUSES).count()
+    if open_orders >= settings.MAX_OPEN_ORDERS_PER_PHONE:
+        raise CheckoutError(
+            "This number already has orders in progress. We will call you about them first."
+        )
+    if ip_address:
+        hour_ago = timezone.now() - timedelta(hours=1)
+        recent = Order.objects.filter(ip_address=ip_address, created_at__gte=hour_ago).count()
+        if recent >= settings.MAX_ORDERS_PER_IP_PER_HOUR:
+            raise CheckoutError("Too many orders from your connection. Please try again later.")
+
+
 @transaction.atomic
 def place_order(cart, customer, *, user=None, ip_address=None):
     """Create an order from the cart and reserve its stock. All or nothing.
@@ -69,6 +89,7 @@ def place_order(cart, customer, *, user=None, ip_address=None):
     city = customer["city"]
     if not (city.is_active and city.cod_allowed):
         raise CheckoutError(f"Cash on Delivery is not available in {city.name}.")
+    check_customer_limits(customer["phone"], ip_address)
 
     # Check the rules again: stock or prices may have changed since the cart page.
     for line in lines:

@@ -133,3 +133,14 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product_title}"
+
+
+class BlockedPhone(models.Model):
+    """Phones that cannot place orders, for example after many refused parcels."""
+
+    phone = models.CharField(max_length=16, unique=True)
+    reason = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return display_pk_mobile(self.phone)
