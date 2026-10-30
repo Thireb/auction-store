@@ -242,13 +242,30 @@ class Variant(models.Model):
     weight_grams = models.PositiveIntegerField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=0)
-    history = HistoricalRecords()
+    # Stock numbers change only through apps.inventory.services, which also writes the history.
+    track_stock = models.BooleanField(
+        default=True, help_text="Untick for items that are always available."
+    )
+    stock_on_hand = models.IntegerField(default=0, editable=False)
+    stock_reserved = models.IntegerField(default=0, editable=False)
+    low_stock_threshold = models.PositiveIntegerField(
+        default=2, help_text="Show in the low stock list at or below this quantity."
+    )
+    history = HistoricalRecords(excluded_fields=["stock_on_hand", "stock_reserved"])
 
     class Meta:
         ordering = ["sort_order", "pk"]
 
     def __str__(self):
         return f"{self.product.title} - {self.name}" if self.name else self.product.title
+
+    @property
+    def stock_available(self):
+        return self.stock_on_hand - self.stock_reserved
+
+    @property
+    def in_stock(self):
+        return not self.track_stock or self.stock_available > 0
 
 
 class ProductImage(models.Model):
