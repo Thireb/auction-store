@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     # Local
     "apps.core",
     "apps.catalog",
+    "apps.inventory",
 ]
 
 MIDDLEWARE = [
@@ -102,6 +103,8 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="store@example.com")
 ORDER_ALERT_EMAIL = env("ORDER_ALERT_EMAIL", default="")
 
 STORE_NAME = env("STORE_NAME", default="Auction Store")
+# A sold-out product stays in lists with a "Sold" badge for this many days.
+SOLD_OUT_LISTED_DAYS = env.int("SOLD_OUT_LISTED_DAYS", default=7)
 
 LOGGING = {
     "version": 1,

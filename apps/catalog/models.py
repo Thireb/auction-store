@@ -1,10 +1,14 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Q
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.text import slugify
 from simple_history.models import HistoricalRecords
 
@@ -162,7 +166,13 @@ class Brand(SluggedModel):
 
 class ProductQuerySet(models.QuerySet):
     def visible(self):
+        """Products a customer can open."""
         return self.filter(is_active=True, category__is_active=True)
+
+    def listed(self):
+        """Products in lists. Sold-out products stay listed for SOLD_OUT_LISTED_DAYS days."""
+        cutoff = timezone.now() - timedelta(days=settings.SOLD_OUT_LISTED_DAYS)
+        return self.visible().filter(Q(sold_out_at__isnull=True) | Q(sold_out_at__gte=cutoff))
 
 
 class Product(SluggedModel):
@@ -186,9 +196,12 @@ class Product(SluggedModel):
     )
     is_active = models.BooleanField(default=True, help_text="Untick to hide from the store.")
     is_featured = models.BooleanField(default=False)
+    sold_out_at = models.DateTimeField(
+        null=True, blank=True, editable=False, help_text="Set when the last piece is sold."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    history = HistoricalRecords()
+    history = HistoricalRecords(excluded_fields=["sold_out_at"])
 
     objects = ProductQuerySet.as_manager()
 
@@ -212,6 +225,22 @@ class Product(SluggedModel):
 
     def active_variants(self):
         return [v for v in self.variants.all() if v.is_active]
+
+    @property
+    def is_sold_out(self):
+        variants = self.active_variants()
+        return not any(v.in_stock for v in variants)
+
+    def update_sold_out(self):
+        """Set or clear sold_out_at from the current stock. Called after each stock change."""
+        sold_out = not any(v.in_stock for v in self.variants.filter(is_active=True))
+        if sold_out and self.sold_out_at is None:
+            self.sold_out_at = timezone.now()
+        elif not sold_out and self.sold_out_at is not None:
+            self.sold_out_at = None
+        else:
+            return
+        Product.objects.filter(pk=self.pk).update(sold_out_at=self.sold_out_at)
 
     @property
     def min_price(self):
@@ -242,13 +271,63 @@ class Variant(models.Model):
     weight_grams = models.PositiveIntegerField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=0)
-    history = HistoricalRecords()
+    # Stock numbers change only through apps.inventory.services, which also writes the history.
+    track_stock = models.BooleanField(
+        default=True, help_text="Untick for items that are always available."
+    )
+    stock_on_hand = models.IntegerField(default=0, editable=False)
+    stock_reserved = models.IntegerField(default=0, editable=False)
+    low_stock_threshold = models.PositiveIntegerField(
+        default=2, help_text="Show in the low stock list at or below this quantity."
+    )
+    min_order_qty = models.PositiveIntegerField(
+        "minimum order quantity", default=1, validators=[MinValueValidator(1)]
+    )
+    order_step = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text="Sold in multiples of this number, for example 12 for a pack of 12.",
+    )
+    history = HistoricalRecords(excluded_fields=["stock_on_hand", "stock_reserved"])
 
     class Meta:
         ordering = ["sort_order", "pk"]
+        permissions = [("change_price", "Can change prices of existing variants")]
 
     def __str__(self):
         return f"{self.product.title} - {self.name}" if self.name else self.product.title
+
+    @property
+    def stock_available(self):
+        return self.stock_on_hand - self.stock_reserved
+
+    @property
+    def in_stock(self):
+        return not self.track_stock or self.stock_available > 0
+
+
+class PriceTier(models.Model):
+    """A lower unit price from a minimum quantity. Wholesale-only tiers need an approved buyer."""
+
+    variant = models.ForeignKey(Variant, related_name="price_tiers", on_delete=models.CASCADE)
+    min_quantity = models.PositiveIntegerField(validators=[MinValueValidator(2)])
+    unit_price = models.DecimalField(**MONEY)
+    wholesale_only = models.BooleanField(
+        default=False, help_text="Only approved wholesale buyers get this price."
+    )
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["wholesale_only", "min_quantity"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["variant", "min_quantity", "wholesale_only"], name="unique_price_tier"
+            )
+        ]
+
+    def __str__(self):
+        label = "wholesale " if self.wholesale_only else ""
+        return f"{self.min_quantity}+ {label}at Rs {self.unit_price:,}"
 
 
 class ProductImage(models.Model):

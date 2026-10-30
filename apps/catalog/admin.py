@@ -1,12 +1,19 @@
 from django import forms
 from django.contrib import admin
+from django.core.exceptions import PermissionDenied
+from django.db.models import F
+from django.http import HttpResponse
+from django.template.response import TemplateResponse
+from django.urls import path
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
+from .importer import import_csv, template_csv
 from .models import (
     Attribute,
     Brand,
     Category,
+    PriceTier,
     Product,
     ProductAttributeValue,
     ProductImage,
@@ -59,11 +66,122 @@ class BrandAdmin(OwnerDeleteMixin, admin.ModelAdmin):
     prepopulated_fields = {"slug": ["name"]}
 
 
+PRICE_PERM = "catalog.change_price"
+
+
+class PriceLockedForm(forms.ModelForm):
+    """Staff without the change_price permission set prices on new variants only."""
+
+    user = None
+    price_fields = ("price", "compare_at_price")
+
+    def clean(self):
+        data = super().clean()
+        if self.instance.pk and self.user and not self.user.has_perm(PRICE_PERM):
+            for name in self.price_fields:
+                if name in self.changed_data:
+                    self.add_error(name, "You do not have permission to change prices.")
+        return data
+
+
+def with_user(form_class, user):
+    return type(form_class.__name__, (form_class,), {"user": user})
+
+
 class VariantInline(admin.TabularInline):
     model = Variant
+    form = PriceLockedForm
     extra = 0
     min_num = 1
-    fields = ["sku", "name", "price", "compare_at_price", "weight_grams", "is_active", "sort_order"]
+    fields = [
+        "sku",
+        "name",
+        "price",
+        "compare_at_price",
+        "min_order_qty",
+        "order_step",
+        "weight_grams",
+        "track_stock",
+        "stock_on_hand",
+        "stock_reserved",
+        "is_active",
+        "sort_order",
+    ]
+    readonly_fields = ["stock_on_hand", "stock_reserved"]
+    show_change_link = True
+
+    def get_formset(self, request, obj=None, **kwargs):
+        kwargs["form"] = with_user(self.form, request.user)
+        return super().get_formset(request, obj, **kwargs)
+
+
+class PriceTierInline(admin.TabularInline):
+    model = PriceTier
+    extra = 1
+    fields = ["min_quantity", "unit_price", "wholesale_only"]
+
+    def _can_edit(self, request):
+        return request.user.has_perm(PRICE_PERM)
+
+    def has_add_permission(self, request, obj=None):
+        return self._can_edit(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self._can_edit(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return self._can_edit(request)
+
+    def has_view_permission(self, request, obj=None):
+        return True
+
+
+class LowStockFilter(admin.SimpleListFilter):
+    title = "stock"
+    parameter_name = "stock"
+
+    def lookups(self, request, model_admin):
+        return [("low", "Low stock"), ("out", "Out of stock")]
+
+    def queryset(self, request, queryset):
+        if self.value() not in ("low", "out"):
+            return None
+        available = F("stock_on_hand") - F("stock_reserved")
+        queryset = queryset.filter(track_stock=True).annotate(available_qty=available)
+        if self.value() == "low":
+            return queryset.filter(available_qty__lte=F("low_stock_threshold"), available_qty__gt=0)
+        return queryset.filter(available_qty__lte=0)
+
+
+@admin.register(Variant)
+class VariantAdmin(OwnerDeleteMixin, SimpleHistoryAdmin):
+    """The stock view: every variant with its stock numbers."""
+
+    list_display = [
+        "sku",
+        "__str__",
+        "price",
+        "stock_on_hand",
+        "stock_reserved",
+        "available",
+        "low_stock_threshold",
+        "is_active",
+    ]
+    list_filter = [LowStockFilter, "is_active", "track_stock", "product__category"]
+    search_fields = ["sku", "name", "product__title"]
+    list_select_related = ["product"]
+    readonly_fields = ["stock_on_hand", "stock_reserved"]
+    autocomplete_fields = ["product"]
+    form = PriceLockedForm
+    inlines = [PriceTierInline]
+
+    def get_form(self, request, obj=None, **kwargs):
+        kwargs["form"] = with_user(self.form, request.user)
+        return super().get_form(request, obj, **kwargs)
+
+    @admin.display(description="Available")
+    def available(self, obj):
+        return obj.stock_available if obj.track_stock else "-"
 
 
 class ProductImageInline(admin.TabularInline):
@@ -108,9 +226,15 @@ class ProductAdminForm(forms.ModelForm):
                 ).delete()
 
 
+class ImportForm(forms.Form):
+    file = forms.FileField(label="CSV file")
+    dry_run = forms.BooleanField(label="Check only (do not save)", required=False, initial=True)
+
+
 @admin.register(Product)
 class ProductAdmin(OwnerDeleteMixin, SimpleHistoryAdmin):
     form = ProductAdminForm
+    change_list_template = "admin/catalog/product/change_list.html"
     list_display = ["title", "category", "brand", "condition", "price", "is_active", "is_featured"]
     list_editable = ["is_active", "is_featured"]
     list_filter = ["is_active", "is_featured", "condition", "category", "brand"]
@@ -158,6 +282,47 @@ class ProductAdmin(OwnerDeleteMixin, SimpleHistoryAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related("variants")
+
+    def get_urls(self):
+        custom = [
+            path(
+                "import/",
+                self.admin_site.admin_view(self.import_view),
+                name="catalog_product_import",
+            )
+        ]
+        return custom + super().get_urls()
+
+    def import_view(self, request):
+        if not (
+            self.has_add_permission(request)
+            and request.user.has_perm("inventory.add_stockmovement")
+        ):
+            raise PermissionDenied
+        if request.GET.get("template"):
+            response = HttpResponse(template_csv(), content_type="text/csv")
+            response["Content-Disposition"] = 'attachment; filename="products-template.csv"'
+            return response
+        result, dry_run = None, True
+        form = ImportForm(request.POST or None, request.FILES or None)
+        if request.method == "POST" and form.is_valid():
+            dry_run = form.cleaned_data["dry_run"]
+            result = import_csv(form.cleaned_data["file"], request.user, dry_run=dry_run)
+            if result.ok and not dry_run:
+                self.message_user(
+                    request,
+                    f"Imported {result.products_created} products, "
+                    f"{result.variants_created} variants and {result.stock_rows} stock rows.",
+                )
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Import CSV",
+            "form": form,
+            "result": result,
+            "dry_run": dry_run,
+            "opts": self.model._meta,
+        }
+        return TemplateResponse(request, "admin/catalog/product/import.html", context)
 
     @admin.display(description="Price")
     def price(self, obj):
