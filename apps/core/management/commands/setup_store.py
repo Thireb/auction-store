@@ -16,7 +16,6 @@ class Command(BaseCommand):
         ShippingSettings.load()
         self.stdout.write(
             self.style.SUCCESS(
-                "Done. Now set the fees and payment details in the admin: "
-                "Shipping and payment settings."
+                "Done. Now set the fees and payment details in the staff portal: /staff/settings/."
             )
         )

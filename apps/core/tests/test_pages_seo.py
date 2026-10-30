@@ -19,7 +19,7 @@ def test_page_and_footer_link(client):
 
 def test_sitemap_lists_products_and_pages(client):
     product = ProductFactory(title="Brass lamp")
-    VariantFactory(product=product)
+    VariantFactory(track_stock=False, product=product)
     Page.objects.create(title="FAQ", body="x")
     content = client.get(reverse("sitemap")).content.decode()
     assert product.get_absolute_url() in content
@@ -33,7 +33,7 @@ def test_robots_txt(client):
 
 
 def test_product_page_has_open_graph_tags(client):
-    variant = VariantFactory(product=ProductFactory(title="Brass lamp"))
+    variant = VariantFactory(track_stock=False, product=ProductFactory(title="Brass lamp"))
     content = client.get(variant.product.get_absolute_url()).content.decode()
     assert '<meta property="og:title" content="Brass lamp">' in content
     assert 'rel="canonical"' in content

@@ -36,6 +36,7 @@ def robots_txt(request):
     lines = [
         "User-agent: *",
         f"Disallow: /{settings.ADMIN_URL}",
+        "Disallow: /staff/",
         "Disallow: /cart/",
         "Disallow: /checkout/",
         "Disallow: /account/",

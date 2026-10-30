@@ -1,0 +1,2 @@
+{% for error in form.non_field_errors %}<p class="rounded bg-red-50 border border-red-300 px-3 py-2 text-red-700">{{ error }}</p>{% endfor %}
+{% for field in form %}{% include "portal/partials/field.html" %}{% endfor %}

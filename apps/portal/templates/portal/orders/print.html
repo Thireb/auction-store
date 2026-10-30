@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ order.number }}</title>
+  <style>
+    body { font-family: sans-serif; font-size: 13px; margin: 20px; }
+    .slip { border: 1px dashed #333; padding: 12px; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; }
+    td, th { border-bottom: 1px solid #ccc; padding: 4px; text-align: left; }
+    .right { text-align: right; }
+    .big { font-size: 18px; font-weight: bold; }
+    @media print { button { display: none; } }
+  </style>
+</head>
+<body>
+  <button onclick="window.print()">Print</button>
+
+  <div class="slip">
+    <p class="big">COD: Rs {{ order.cod_amount }}</p>
+    <p><strong>To:</strong> {{ order.full_name }}<br>{{ order.phone_display }}<br>
+       {{ order.address }}{% if order.landmark %}, near {{ order.landmark }}{% endif %}<br>
+       <strong>{{ order.city_name }}</strong></p>
+    <p><strong>Order:</strong> {{ order.number }} &nbsp; <strong>Pieces:</strong> {{ order.items.all|length }}</p>
+  </div>
+
+  <h2>Invoice {{ order.number }}</h2>
+  <p>Date: {{ order.created_at|date:"d M Y" }}</p>
+  <table>
+    <tr><th>Item</th><th>SKU</th><th class="right">Price</th><th class="right">Qty</th><th class="right">Total</th></tr>
+    {% for item in order.items.all %}
+      <tr><td>{{ item.product_title }} {{ item.variant_name }}</td><td>{{ item.sku }}</td><td class="right">{{ item.unit_price }}</td><td class="right">{{ item.quantity }}</td><td class="right">{{ item.line_total }}</td></tr>
+    {% endfor %}
+    <tr><td colspan="4" class="right">Subtotal</td><td class="right">{{ order.subtotal }}</td></tr>
+    <tr><td colspan="4" class="right">Delivery</td><td class="right">{{ order.delivery_fee }}</td></tr>
+    {% if order.cod_fee %}<tr><td colspan="4" class="right">COD fee</td><td class="right">{{ order.cod_fee }}</td></tr>{% endif %}
+    {% if order.advance_status == "received" %}<tr><td colspan="4" class="right">Advance paid</td><td class="right">-{{ order.advance_amount }}</td></tr>{% endif %}
+    <tr><td colspan="4" class="right"><strong>Cash on Delivery (PKR)</strong></td><td class="right"><strong>{{ order.cod_amount }}</strong></td></tr>
+  </table>
+</body>
+</html>

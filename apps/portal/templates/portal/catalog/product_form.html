@@ -1,0 +1,87 @@
+{% extends "portal/base.html" %}
+{% load money %}
+{% block content %}
+<p><a class="underline text-gray-600" href="{% url 'portal:product_list' %}">&larr; Products</a></p>
+<div class="flex flex-wrap items-center gap-3 mt-1">
+  <h1 class="text-xl font-bold">{{ title }}</h1>
+  {% if product and product.is_active %}<a class="ml-auto underline" href="{{ product.get_absolute_url }}" target="_blank">Open in the store</a>{% endif %}
+</div>
+
+<form method="post" enctype="multipart/form-data" class="mt-4 space-y-4" id="product-form">
+  {% csrf_token %}
+  {% for error in variants.non_form_errors %}<p class="rounded bg-red-50 border border-red-300 px-3 py-2 text-red-700">{{ error }}</p>{% endfor %}
+
+  <section class="bg-white border rounded p-4">
+    <h2 class="font-bold">Details</h2>
+    {% for error in form.non_field_errors %}<p class="text-red-700">{{ error }}</p>{% endfor %}
+    <div class="mt-3 grid sm:grid-cols-2 gap-3">
+      {% for field in form.main_fields %}
+        <div class="{% if field.name == 'description' or field.name == 'title' %}sm:col-span-2{% endif %}">{% include "portal/partials/field.html" %}</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="bg-white border rounded p-4">
+    <h2 class="font-bold">Attributes</h2>
+    <p class="text-gray-500">These fields come from the category. Change the category and they change too.</p>
+    <div class="mt-3">{% include "portal/catalog/partials/attributes.html" %}</div>
+  </section>
+
+  <section class="bg-white border rounded p-4">
+    <h2 class="font-bold">Photos</h2>
+    {{ images.management_form }}
+    {% if images.forms %}
+      <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3" id="product-images">
+        {% for f in images.forms %}
+          <div class="border rounded p-2 space-y-1">
+            {{ f.id }}
+            <img src="{{ f.instance.image.url }}" alt="{{ f.instance.alt_text }}" class="w-full aspect-square object-cover rounded">
+            {{ f.alt_text }}
+            <label class="flex items-center gap-1 text-xs">Order {{ f.sort_order }}</label>
+            {% if can_delete_images %}<label class="flex items-center gap-1 text-xs text-red-700">{{ f.DELETE }} Remove</label>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}<p class="mt-2 text-gray-500">No photos yet.</p>{% endif %}
+    {% if can_upload and can_save %}<div class="mt-3">{% include "portal/partials/field.html" with field=upload.images %}</div>{% endif %}
+  </section>
+
+  <section class="bg-white border rounded p-4">
+    <h2 class="font-bold">Variants, prices and stock</h2>
+    <p class="text-gray-500">Each product has at least 1 variant. Use more variants for sizes or colours. Bulk prices are on the variant page.</p>
+    {{ variants.management_form }}
+    <div class="mt-3 space-y-3">
+      {% for f in variants.forms %}
+        <fieldset class="border rounded p-3 variant-row">
+          <legend class="px-1 font-medium">{% if f.instance.pk %}{{ f.instance.sku }}{% if f.instance.track_stock %} &middot; {{ f.instance.stock_on_hand }} on hand, {{ f.instance.stock_reserved }} reserved{% endif %}{% else %}New variant{% endif %}</legend>
+          {{ f.id }}
+          {% for error in f.non_field_errors %}<p class="text-red-700">{{ error }}</p>{% endfor %}
+          <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">
+            {% for field in f.visible_fields %}{% include "portal/partials/field.html" %}{% endfor %}
+          </div>
+          {% if f.instance.pk %}<a class="inline-block mt-2 underline" href="{% url 'portal:variant_detail' f.instance.pk %}">Bulk prices, stock history and adjustments &rarr;</a>{% endif %}
+        </fieldset>
+      {% endfor %}
+    </div>
+    {% if can_stock and can_save %}
+      <label class="block mt-3 max-w-sm"><span class="font-medium">Lot for the added stock</span>
+        <select name="stock_lot" class="mt-1 w-full border rounded px-2 py-1 bg-white">
+          <option value="">No lot</option>
+          {% for lot in lots %}<option value="{{ lot.pk }}">{{ lot }}{% if lot.source %} ({{ lot.source }}){% endif %}</option>{% endfor %}
+        </select>
+      </label>
+    {% endif %}
+  </section>
+
+  {% if can_save %}
+    <div class="sticky bottom-0 bg-gray-100 py-2"><button class="px-5 py-2 rounded bg-gray-900 text-white">Save product</button></div>
+  {% else %}<p class="text-gray-500">You can view this product, but not change it.</p>{% endif %}
+</form>
+
+{% if can_delete %}
+  <form method="post" action="{% url 'portal:product_delete' product.pk %}" class="mt-6" onsubmit="return confirm('Delete this product for good?')">
+    {% csrf_token %}<button class="text-red-700 underline">Delete product (owner only; only without stock or orders)</button>
+  </form>
+{% endif %}
+{% include "portal/partials/history.html" %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "portal/base.html" %}
+{% block content %}
+<div class="flex items-center gap-3">
+  <h1 class="text-xl font-bold">Staff accounts</h1>
+  <a href="{% url 'portal:staff_add' %}" class="ml-auto px-3 py-1.5 rounded bg-gray-900 text-white">New staff account</a>
+</div>
+<p class="text-gray-600">Give each person their own account. Roles set what they can do. You see everything they change under Staff activity.</p>
+<div class="mt-3 bg-white border rounded overflow-x-auto">
+  <table class="w-full">
+    <thead class="text-left text-gray-500 bg-gray-50"><tr><th class="px-3 py-2">Username</th><th class="px-3">Name</th><th class="px-3">Roles</th><th class="px-3">Last login</th><th class="px-3">Active</th><th class="px-3"></th></tr></thead>
+    <tbody>
+      {% for u in users %}
+        <tr class="border-t {% if not u.is_active %}text-gray-400{% endif %}">
+          <td class="px-3 py-1.5">{% if u.is_superuser %}{{ u.username }}{% else %}<a class="underline" href="{% url 'portal:staff_edit' u.pk %}">{{ u.username }}</a>{% endif %}</td>
+          <td class="px-3">{{ u.get_full_name }}</td>
+          <td class="px-3">{% if u.is_superuser %}Owner (all permissions){% else %}{% for g in u.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}{% endif %}</td>
+          <td class="px-3">{{ u.last_login|date:"d M Y H:i"|default:"never" }}</td>
+          <td class="px-3">{{ u.is_active|yesno:"Yes,No" }}</td>
+          <td class="px-3"><a class="underline" href="{% url 'portal:activity' %}?user={{ u.pk }}">Activity</a></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

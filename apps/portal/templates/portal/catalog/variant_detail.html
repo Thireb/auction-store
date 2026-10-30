@@ -1,0 +1,78 @@
+{% extends "portal/base.html" %}
+{% load money %}
+{% block content %}
+<p><a class="underline text-gray-600" href="{% url 'portal:product_edit' variant.product_id %}">&larr; {{ variant.product.title }}</a></p>
+<h1 class="mt-1 text-xl font-bold">{{ title }} <span class="text-gray-500 font-normal">({{ variant.sku }})</span></h1>
+<div class="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-3 max-w-3xl" id="stock-numbers">
+  <div class="bg-white border rounded p-3">On hand<b class="block text-xl">{{ variant.stock_on_hand }}</b></div>
+  <div class="bg-white border rounded p-3">Reserved<b class="block text-xl">{{ variant.stock_reserved }}</b></div>
+  <div class="bg-white border rounded p-3">Available<b class="block text-xl">{% if variant.track_stock %}{{ variant.stock_available }}{% else %}&infin;{% endif %}</b></div>
+  <div class="bg-white border rounded p-3">Price<b class="block text-xl">{{ variant.price|rupees }}</b></div>
+  <div class="bg-white border rounded p-3">MOQ / step<b class="block text-xl">{{ variant.min_order_qty }} / {{ variant.order_step }}</b></div>
+</div>
+
+<div class="mt-4 grid lg:grid-cols-2 gap-4">
+  <section class="bg-white border rounded p-4">
+    <h2 class="font-bold">Bulk prices</h2>
+    <p class="text-gray-500">From a quantity, each piece costs less. "Wholesale only" prices are only for approved wholesale buyers.</p>
+    <form method="post" class="mt-3">
+      {% csrf_token %}<input type="hidden" name="action" value="tiers">
+      {{ tiers.management_form }}
+      {% for error in tiers.non_form_errors %}<p class="text-red-700">{{ error }}</p>{% endfor %}
+      <table class="w-full" id="tiers">
+        <thead class="text-left text-gray-500"><tr><th>From quantity</th><th>Price per piece (Rs)</th><th>Wholesale only</th>{% if can_price %}<th>Remove</th>{% endif %}</tr></thead>
+        <tbody>
+          {% for f in tiers.forms %}
+            <tr class="align-top">
+              <td class="pr-2 py-1">{{ f.id }}{{ f.min_quantity }}{% for e in f.min_quantity.errors %}<p class="text-xs text-red-600">{{ e }}</p>{% endfor %}{% for e in f.non_field_errors %}<p class="text-xs text-red-600">{{ e }}</p>{% endfor %}</td>
+              <td class="pr-2 py-1">{{ f.unit_price }}{% for e in f.unit_price.errors %}<p class="text-xs text-red-600">{{ e }}</p>{% endfor %}</td>
+              <td class="py-1">{{ f.wholesale_only }}</td>
+              {% if can_price %}<td class="py-1">{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td>{% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if can_price %}<button class="mt-3 px-4 py-2 rounded bg-gray-900 text-white">Save bulk prices</button>{% else %}<p class="mt-2 text-gray-500">You need the "change prices" permission to edit prices.</p>{% endif %}
+    </form>
+  </section>
+
+  <section class="bg-white border rounded p-4">
+    <h2 class="font-bold">Receive or adjust stock</h2>
+    {% if can_stock %}
+      <form method="post" class="mt-3 space-y-3">
+        {% csrf_token %}<input type="hidden" name="action" value="stock">
+        {% for error in stock_form.non_field_errors %}<p class="text-red-700">{{ error }}</p>{% endfor %}
+        <div class="grid sm:grid-cols-2 gap-3">
+          {% for field in stock_form %}{% include "portal/partials/field.html" %}{% endfor %}
+        </div>
+        <button class="px-4 py-2 rounded bg-gray-900 text-white">Save stock change</button>
+      </form>
+    {% else %}<p class="mt-2 text-gray-500">You cannot change stock.</p>{% endif %}
+    {% if stock_items %}
+      <h3 class="mt-4 font-semibold">Stock by lot</h3>
+      <table class="w-full mt-1"><thead class="text-left text-gray-500"><tr><th>Lot</th><th>Received</th><th>On hand</th>{% if show_cost %}<th>Cost per piece</th>{% endif %}</tr></thead>
+        <tbody>{% for item in stock_items %}<tr class="border-t"><td>{{ item.lot|default:"No lot" }}</td><td>{{ item.quantity_received }}</td><td>{{ item.quantity_on_hand }}</td>{% if show_cost %}<td>{{ item.cost_per_unit|rupees|default:"-" }}</td>{% endif %}</tr>{% endfor %}</tbody>
+      </table>
+    {% endif %}
+  </section>
+</div>
+
+<section class="mt-4 bg-white border rounded p-4">
+  <h2 class="font-bold">Variant settings</h2>
+  <form method="post" class="mt-3">
+    {% csrf_token %}<input type="hidden" name="action" value="variant">
+    {% for error in form.non_field_errors %}<p class="text-red-700">{{ error }}</p>{% endfor %}
+    <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">{% for field in form %}{% include "portal/partials/field.html" %}{% endfor %}</div>
+    {% if can_change %}<button class="mt-3 px-4 py-2 rounded bg-gray-900 text-white">Save variant</button>{% endif %}
+  </form>
+</section>
+
+<section class="mt-4 bg-white border rounded overflow-x-auto">
+  <h2 class="font-bold px-4 pt-3">Stock movements (last 50)</h2>
+  <table class="w-full mt-2">
+    <thead class="text-left text-gray-500 bg-gray-50"><tr><th class="px-3 py-1">When</th><th class="px-3">What</th><th class="px-3">Change</th><th class="px-3">On hand after</th><th class="px-3">Reserved after</th><th class="px-3">Lot</th><th class="px-3">Reference</th><th class="px-3">Who</th></tr></thead>
+    <tbody>{% for m in movements %}<tr class="border-t"><td class="px-3 py-1 whitespace-nowrap">{{ m.created_at|date:"d M Y H:i" }}</td><td class="px-3">{{ m.get_kind_display }}{% if m.note %} &middot; <span class="text-gray-500">{{ m.note }}</span>{% endif %}</td><td class="px-3">{{ m.quantity|stringformat:"+d" }}</td><td class="px-3">{{ m.on_hand_after }}</td><td class="px-3">{{ m.reserved_after }}</td><td class="px-3">{{ m.lot|default:"" }}</td><td class="px-3">{{ m.reference }}</td><td class="px-3">{{ m.user|default:"customer" }}</td></tr>{% empty %}<tr><td colspan="8" class="px-3 py-2 text-gray-500">No stock movements yet.</td></tr>{% endfor %}</tbody>
+  </table>
+</section>
+{% include "portal/partials/history.html" %}
+{% endblock %}

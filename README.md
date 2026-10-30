@@ -12,7 +12,7 @@ An online store for the Pakistani market. It sells Dubai auction items and expor
 - Cart and 1-page COD checkout. Guest checkout, with an optional "Create an account" checkbox.
 - Configurable delivery and COD fees per city. Optional advance payment for large items.
 - Order flow with phone confirmation, status history and printable packing slips.
-- Django admin back office. The owner creates staff accounts and sees an audit log of all staff changes.
+- Staff portal at `/staff/`. The owner creates staff accounts and sees an audit log of all staff changes. The Django admin stays as a hidden fallback for the owner.
 
 ## Tech stack
 
@@ -52,7 +52,7 @@ You need Docker with Docker Compose.
    docker compose exec web python manage.py seed_demo
    ```
 
-5. Open http://localhost:8000 for the store and http://localhost:8000/admin/ for the back office.
+5. Open http://localhost:8000 for the store and http://localhost:8000/staff/ for the staff portal.
 
 Without Docker: create a PostgreSQL database, set `DATABASE_URL` in `.env` to it, then run `pip install -r requirements-dev.txt`, `python manage.py migrate` and `python manage.py runserver`.
 
@@ -75,15 +75,16 @@ AI coding agents follow [AGENTS.md](AGENTS.md).
 3. A task branch merges into its phase branch through a pull request.
 4. When all tasks of a phase are done and tested, the phase branch merges into `main`.
 
-## Back office (admin)
+## Staff portal (/staff/)
 
-- **Admin home**: shortcuts to the dashboard, staff activity, stock view, low stock and orders to confirm.
-- **Catalog**: categories, attributes (define them per category, no code needed), brands, products with variants, images and price tiers. Products > **Import CSV** for bulk uploads.
-- **Stock**: Stock movements > Add to receive or adjust stock. Lots hold auction purchases and costs.
-- **Orders**: status buttons, call and WhatsApp links, print slip, advance check.
-- **Shipping and payment settings** and **Cities**: all delivery fees and advance rules.
-- **Pages**: About, Delivery information, FAQ, Contact.
-- **Users and groups**: the owner creates staff accounts and puts them in the "Inventory manager" or "Order manager" group.
+- **Dashboard**: orders to confirm, advances to check, orders to dispatch, COD cash, sales, profit (owner), near-empty and out-of-stock counts. A bell in the header lists near-empty items.
+- **Orders**: status tabs, call and WhatsApp buttons, status changes with notes and courier, advance screenshot and "Mark advance received", address edit until dispatch, print slip. **Wholesale buyers**: approve or reject. **Blocked phones**.
+- **Catalog**: products with photos (many at once), attributes from the category, variants, and stock received on the same page. Categories (tree), attributes, brands.
+- **Stock**: stock levels, **Near empty**, **Out of stock** (hidden from customers), stock movements, lots, CSV import. Each variant page has bulk prices, receive or adjust stock, stock by lot and history.
+- **Store settings**: fees, advance rules, payment details and the store-wide "near empty" number; cities; pages.
+- **Owner**: staff accounts with roles ("Inventory manager", "Order manager") and extra permissions; staff activity.
+
+Every page checks the same Django permissions. The owner (superuser) sees everything.
 
 ## Deployment
 

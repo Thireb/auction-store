@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from apps.catalog.models import Attribute, Product
+from apps.catalog.models import Attribute
 
 from .factories import AttributeFactory, CategoryFactory, ProductFactory, VariantFactory
 
@@ -70,20 +70,6 @@ def test_product_form_saves_attribute_values(owner_client):
     assert product.attribute_values() == []
 
 
-def test_staff_cannot_delete_products(client):
-    staff = get_user_model().objects.create_user("staff", password="pass", is_staff=True)
-    from django.contrib.auth.models import Permission
-
-    staff.user_permissions.add(*Permission.objects.filter(content_type__app_label="catalog"))
-    client.force_login(staff)
-    product = ProductFactory()
-    response = client.post(
-        reverse("admin:catalog_product_delete", args=[product.pk]), {"post": "yes"}
-    )
-    assert response.status_code == 403
-    assert Product.objects.filter(pk=product.pk).exists()
-
-
 @pytest.mark.parametrize(
     "name", ["catalog_product", "catalog_category", "catalog_attribute", "catalog_brand"]
 )
@@ -93,37 +79,12 @@ def test_admin_pages_load(owner_client, name):
     assert owner_client.get(reverse(f"admin:{name}_add")).status_code == 200
 
 
-def test_staff_without_price_permission_cannot_change_price(client):
+def test_admin_is_owner_only(client):
+    staff = get_user_model().objects.create_user("staff", password="pass", is_staff=True)
     from django.contrib.auth.models import Permission
 
-    staff = get_user_model().objects.create_user("inv", password="x", is_staff=True)
-    staff.user_permissions.add(
-        *Permission.objects.filter(codename__in=["change_variant", "view_variant"])
-    )
+    staff.user_permissions.add(*Permission.objects.filter(content_type__app_label="catalog"))
     client.force_login(staff)
-    variant = VariantFactory(price=1000)
-    url = reverse("admin:catalog_variant_change", args=[variant.pk])
-    data = {
-        "product": variant.product.pk,
-        "sku": variant.sku,
-        "price": "800",
-        "min_order_qty": 1,
-        "order_step": 1,
-        "low_stock_threshold": 2,
-        "is_active": "on",
-        "track_stock": "on",
-        "sort_order": 0,
-        "price_tiers-TOTAL_FORMS": "0",
-        "price_tiers-INITIAL_FORMS": "0",
-        "price_tiers-MIN_NUM_FORMS": "0",
-        "price_tiers-MAX_NUM_FORMS": "1000",
-    }
-    response = client.post(url, data)
-    assert response.status_code == 200
-    assert "permission to change prices" in response.content.decode()
-
-    staff.user_permissions.add(Permission.objects.get(codename="change_price"))
-    response = client.post(url, data)
+    response = client.get(reverse("admin:catalog_product_changelist"))
     assert response.status_code == 302
-    variant.refresh_from_db()
-    assert variant.price == 800
+    assert "/login/" in response["Location"]

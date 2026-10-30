@@ -1,0 +1,32 @@
+{% extends "portal/base.html" %}
+{% block content %}
+<p><a class="underline text-gray-600" href="{% url 'portal:staff_list' %}">&larr; Staff accounts</a></p>
+<h1 class="mt-1 text-xl font-bold">{{ title }}</h1>
+<form method="post" class="mt-4 space-y-4 max-w-3xl" autocomplete="off">
+  {% csrf_token %}
+  {% for error in form.non_field_errors %}<p class="text-red-700">{{ error }}</p>{% endfor %}
+  <section class="bg-white border rounded p-4 grid sm:grid-cols-2 gap-3">
+    {% include "portal/partials/field.html" with field=form.username %}
+    {% include "portal/partials/field.html" with field=form.password %}
+    {% include "portal/partials/field.html" with field=form.first_name %}
+    {% include "portal/partials/field.html" with field=form.last_name %}
+    {% include "portal/partials/field.html" with field=form.email %}
+    {% include "portal/partials/field.html" with field=form.is_active %}
+  </section>
+  <section class="bg-white border rounded p-4">
+    <h2 class="font-bold">Roles</h2>
+    <p class="text-gray-500">Inventory manager: products, categories, stock and lots. Order manager: orders, phone confirmation, wholesale requests.</p>
+    <div class="mt-2">{% for choice in form.groups %}<label class="flex items-center gap-2">{{ choice.tag }} {{ choice.choice_label }}</label>{% endfor %}</div>
+  </section>
+  <details class="bg-white border rounded p-4" {% if form.user_permissions.value %}open{% endif %}>
+    <summary class="font-bold cursor-pointer">Extra permissions (optional)</summary>
+    <p class="text-gray-500 mt-1">Add single permissions on top of the roles, for example "Can change prices", "Can adjust stock by hand", "Can see costs and profit" or "Can approve wholesale buyers".</p>
+    <div class="mt-3 grid sm:grid-cols-2 gap-4">
+      {% for label, choices in form.permission_groups %}
+        <div><p class="font-medium">{{ label }}</p>{% for choice in choices %}<label class="flex items-center gap-2 text-xs">{{ choice.tag }} {{ choice.choice_label|cut:"Can " }}</label>{% endfor %}</div>
+      {% endfor %}
+    </div>
+  </details>
+  <button class="px-4 py-2 rounded bg-gray-900 text-white">Save staff account</button>
+</form>
+{% endblock %}
