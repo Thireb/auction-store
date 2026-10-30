@@ -77,7 +77,7 @@ EXTRA_CATALOG = {
     "Mobile accessories": {
         "Chargers": (
             ["Anker", "Baseus", "Samsung", "Ugreen", "Apple"],
-            (900, 9000),
+            (900, 5500),
             None,
             [
                 "20W USB-C charger",
@@ -90,7 +90,7 @@ EXTRA_CATALOG = {
         ),
         "Cables": (
             ["Anker", "Baseus", "Ugreen"],
-            (350, 2500),
+            (350, 1500),
             "length",
             [
                 "USB-C to USB-C cable 60W",
@@ -102,7 +102,7 @@ EXTRA_CATALOG = {
         ),
         "Phone cases": (
             ["Spigen", "Ringke", "Baseus"],
-            (500, 3500),
+            (500, 2500),
             "color",
             [
                 "Clear case for Galaxy S24",
@@ -114,7 +114,7 @@ EXTRA_CATALOG = {
         ),
         "Earbuds": (
             ["Anker", "Samsung", "JBL", "Xiaomi"],
-            (2500, 28000),
+            (2500, 18000),
             None,
             [
                 "Noise cancelling earbuds",
@@ -132,7 +132,7 @@ EXTRA_CATALOG = {
         ),
         "Screen protectors": (
             ["Spigen", "Baseus"],
-            (300, 1800),
+            (300, 1200),
             "pack",
             [
                 "Tempered glass for iPhone 15",
@@ -143,7 +143,7 @@ EXTRA_CATALOG = {
         ),
         "Car holders": (
             ["Baseus", "Ugreen"],
-            (800, 4500),
+            (800, 3500),
             None,
             ["Dashboard phone holder", "Air vent magnetic holder", "Wireless charging car mount"],
         ),
