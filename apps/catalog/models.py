@@ -1,10 +1,14 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Q
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.text import slugify
 from simple_history.models import HistoricalRecords
 
@@ -162,7 +166,13 @@ class Brand(SluggedModel):
 
 class ProductQuerySet(models.QuerySet):
     def visible(self):
+        """Products a customer can open."""
         return self.filter(is_active=True, category__is_active=True)
+
+    def listed(self):
+        """Products in lists. Sold-out products stay listed for SOLD_OUT_LISTED_DAYS days."""
+        cutoff = timezone.now() - timedelta(days=settings.SOLD_OUT_LISTED_DAYS)
+        return self.visible().filter(Q(sold_out_at__isnull=True) | Q(sold_out_at__gte=cutoff))
 
 
 class Product(SluggedModel):
@@ -186,9 +196,12 @@ class Product(SluggedModel):
     )
     is_active = models.BooleanField(default=True, help_text="Untick to hide from the store.")
     is_featured = models.BooleanField(default=False)
+    sold_out_at = models.DateTimeField(
+        null=True, blank=True, editable=False, help_text="Set when the last piece is sold."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    history = HistoricalRecords()
+    history = HistoricalRecords(excluded_fields=["sold_out_at"])
 
     objects = ProductQuerySet.as_manager()
 
@@ -212,6 +225,22 @@ class Product(SluggedModel):
 
     def active_variants(self):
         return [v for v in self.variants.all() if v.is_active]
+
+    @property
+    def is_sold_out(self):
+        variants = self.active_variants()
+        return not any(v.in_stock for v in variants)
+
+    def update_sold_out(self):
+        """Set or clear sold_out_at from the current stock. Called after each stock change."""
+        sold_out = not any(v.in_stock for v in self.variants.filter(is_active=True))
+        if sold_out and self.sold_out_at is None:
+            self.sold_out_at = timezone.now()
+        elif not sold_out and self.sold_out_at is not None:
+            self.sold_out_at = None
+        else:
+            return
+        Product.objects.filter(pk=self.pk).update(sold_out_at=self.sold_out_at)
 
     @property
     def min_price(self):
