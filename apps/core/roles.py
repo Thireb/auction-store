@@ -27,6 +27,7 @@ ROLES = {
         "catalog.add_variant",
         "catalog.change_variant",
         "catalog.view_variant",
+        "catalog.view_pricetier",
         "catalog.add_productimage",
         "catalog.change_productimage",
         "catalog.delete_productimage",

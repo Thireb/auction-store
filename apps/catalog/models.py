@@ -251,10 +251,19 @@ class Variant(models.Model):
     low_stock_threshold = models.PositiveIntegerField(
         default=2, help_text="Show in the low stock list at or below this quantity."
     )
+    min_order_qty = models.PositiveIntegerField(
+        "minimum order quantity", default=1, validators=[MinValueValidator(1)]
+    )
+    order_step = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text="Sold in multiples of this number, for example 12 for a pack of 12.",
+    )
     history = HistoricalRecords(excluded_fields=["stock_on_hand", "stock_reserved"])
 
     class Meta:
         ordering = ["sort_order", "pk"]
+        permissions = [("change_price", "Can change prices of existing variants")]
 
     def __str__(self):
         return f"{self.product.title} - {self.name}" if self.name else self.product.title
@@ -266,6 +275,30 @@ class Variant(models.Model):
     @property
     def in_stock(self):
         return not self.track_stock or self.stock_available > 0
+
+
+class PriceTier(models.Model):
+    """A lower unit price from a minimum quantity. Wholesale-only tiers need an approved buyer."""
+
+    variant = models.ForeignKey(Variant, related_name="price_tiers", on_delete=models.CASCADE)
+    min_quantity = models.PositiveIntegerField(validators=[MinValueValidator(2)])
+    unit_price = models.DecimalField(**MONEY)
+    wholesale_only = models.BooleanField(
+        default=False, help_text="Only approved wholesale buyers get this price."
+    )
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["wholesale_only", "min_quantity"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["variant", "min_quantity", "wholesale_only"], name="unique_price_tier"
+            )
+        ]
+
+    def __str__(self):
+        label = "wholesale " if self.wholesale_only else ""
+        return f"{self.min_quantity}+ {label}at Rs {self.unit_price:,}"
 
 
 class ProductImage(models.Model):

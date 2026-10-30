@@ -47,6 +47,21 @@
             {% for v in variants %}<option value="{{ forloop.counter0 }}">{{ v.name|default:v.sku }}</option>{% endfor %}
           </select>
         {% endif %}
+        <template x-if="variants[selected].tiers.length">
+          <table class="mt-4 text-sm border rounded bg-white" id="price-tiers">
+            <thead><tr class="bg-gray-100"><th class="text-left px-3 py-1">Quantity</th><th class="text-left px-3 py-1">Price each</th></tr></thead>
+            <tbody>
+              <tr><td class="px-3 py-1" x-text="variants[selected].min_qty + '+'"></td><td class="px-3 py-1" x-text="'Rs ' + variants[selected].price.toLocaleString('en-US')"></td></tr>
+              <template x-for="tier in variants[selected].tiers" :key="tier.min + '-' + tier.wholesale">
+                <tr><td class="px-3 py-1" x-text="tier.min + '+' + (tier.wholesale ? ' (wholesale)' : '')"></td><td class="px-3 py-1" x-text="'Rs ' + tier.price.toLocaleString('en-US')"></td></tr>
+              </template>
+            </tbody>
+          </table>
+        </template>
+        <p class="mt-2 text-sm text-gray-600" x-show="variants[selected].min_qty > 1 || variants[selected].step > 1" x-cloak>
+          Minimum order <span x-text="variants[selected].min_qty"></span><span x-show="variants[selected].step > 1">, in steps of <span x-text="variants[selected].step"></span></span>.
+        </p>
+        <p class="mt-2 text-sm font-medium text-red-600" x-show="!variants[selected].in_stock" x-cloak>Sold out</p>
         <div id="buy-box" class="mt-6">
           {% block buy_box %}<p class="text-sm text-gray-500">Ordering opens soon.</p>{% endblock %}
         </div>

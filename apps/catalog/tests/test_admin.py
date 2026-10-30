@@ -48,6 +48,9 @@ def test_product_form_saves_attribute_values(owner_client):
         "variants-0-product": product.pk,
         "variants-0-sku": variant.sku,
         "variants-0-price": "2500",
+        "variants-0-min_order_qty": "1",
+        "variants-0-order_step": "1",
+        "variants-0-track_stock": "on",
         "variants-0-is_active": "on",
         "variants-0-sort_order": "0",
         "images-TOTAL_FORMS": "0",
@@ -87,3 +90,39 @@ def test_admin_pages_load(owner_client, name):
     VariantFactory()
     assert owner_client.get(reverse(f"admin:{name}_changelist")).status_code == 200
     assert owner_client.get(reverse(f"admin:{name}_add")).status_code == 200
+
+
+def test_staff_without_price_permission_cannot_change_price(client):
+    from django.contrib.auth.models import Permission
+
+    staff = get_user_model().objects.create_user("inv", password="x", is_staff=True)
+    staff.user_permissions.add(
+        *Permission.objects.filter(codename__in=["change_variant", "view_variant"])
+    )
+    client.force_login(staff)
+    variant = VariantFactory(price=1000)
+    url = reverse("admin:catalog_variant_change", args=[variant.pk])
+    data = {
+        "product": variant.product.pk,
+        "sku": variant.sku,
+        "price": "800",
+        "min_order_qty": 1,
+        "order_step": 1,
+        "low_stock_threshold": 2,
+        "is_active": "on",
+        "track_stock": "on",
+        "sort_order": 0,
+        "price_tiers-TOTAL_FORMS": "0",
+        "price_tiers-INITIAL_FORMS": "0",
+        "price_tiers-MIN_NUM_FORMS": "0",
+        "price_tiers-MAX_NUM_FORMS": "1000",
+    }
+    response = client.post(url, data)
+    assert response.status_code == 200
+    assert "permission to change prices" in response.content.decode()
+
+    staff.user_permissions.add(Permission.objects.get(codename="change_price"))
+    response = client.post(url, data)
+    assert response.status_code == 302
+    variant.refresh_from_db()
+    assert variant.price == 800
