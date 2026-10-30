@@ -58,6 +58,10 @@ docker compose exec web ruff check .
 docker compose exec web ruff format --check .
 ```
 
+## Working with AI agents
+
+AI coding agents follow [AGENTS.md](AGENTS.md).
+
 ## Git workflow
 
 1. Each phase gets a branch from `main`, for example `phase-1/foundation`.
