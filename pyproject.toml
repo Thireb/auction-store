@@ -11,6 +11,8 @@ extend-exclude = ["*/migrations/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "DJ", "SIM"]
+# DJ012 (method order in models) is style only and fights readable grouping.
+ignore = ["DJ012"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps", "config"]

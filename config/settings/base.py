@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "simple_history",
     # Local
     "apps.core",
+    "apps.catalog",
 ]
 
 MIDDLEWARE = [
@@ -58,6 +59,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.store",
+                "apps.catalog.context_processors.nav_categories",
             ],
         },
     },

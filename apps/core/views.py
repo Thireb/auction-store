@@ -3,9 +3,15 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.cache import never_cache
 
+from apps.catalog.views import product_queryset
+
 
 def home(request):
-    return render(request, "core/home.html")
+    context = {
+        "featured": product_queryset().filter(is_featured=True)[:8],
+        "latest": product_queryset()[:8],
+    }
+    return render(request, "core/home.html", context)
 
 
 @never_cache

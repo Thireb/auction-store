@@ -46,7 +46,13 @@ You need Docker with Docker Compose.
    docker compose exec web python manage.py createsuperuser
    ```
 
-4. Open http://localhost:8000 for the store and http://localhost:8000/admin/ for the back office.
+4. Optional: add demo categories, products and images:
+
+   ```bash
+   docker compose exec web python manage.py seed_demo
+   ```
+
+5. Open http://localhost:8000 for the store and http://localhost:8000/admin/ for the back office.
 
 Without Docker: create a PostgreSQL database, set `DATABASE_URL` in `.env` to it, then run `pip install -r requirements-dev.txt`, `python manage.py migrate` and `python manage.py runserver`.
 
