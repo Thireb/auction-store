@@ -2,9 +2,9 @@
 
 An online store for the Pakistani market. It sells Dubai auction items and export leftovers: furniture, mobile accessories, decor, shoes, watches and more. Customers buy single pieces or bulk quantities. Payment is Cash on Delivery (COD) only.
 
-> Status: in development. See [PLAN.md](PLAN.md) for the full plan, the data model and the phases.
+> Status: phases 1 to 6 are built. See [PLAN.md](PLAN.md) for the plan and [DEPLOY.md](DEPLOY.md) to put the store online.
 
-## Features (planned)
+## Features
 
 - Catalog with categories, product variants and image galleries.
 - Bulk price tiers, minimum order quantity (MOQ) and approved wholesale buyers.
@@ -75,6 +75,16 @@ AI coding agents follow [AGENTS.md](AGENTS.md).
 3. A task branch merges into its phase branch through a pull request.
 4. When all tasks of a phase are done and tested, the phase branch merges into `main`.
 
+## Back office (admin)
+
+- **Admin home**: shortcuts to the dashboard, staff activity, stock view, low stock and orders to confirm.
+- **Catalog**: categories, attributes (define them per category, no code needed), brands, products with variants, images and price tiers. Products > **Import CSV** for bulk uploads.
+- **Stock**: Stock movements > Add to receive or adjust stock. Lots hold auction purchases and costs.
+- **Orders**: status buttons, call and WhatsApp links, print slip, advance check.
+- **Shipping and payment settings** and **Cities**: all delivery fees and advance rules.
+- **Pages**: About, Delivery information, FAQ, Contact.
+- **Users and groups**: the owner creates staff accounts and puts them in the "Inventory manager" or "Order manager" group.
+
 ## Deployment
 
-The app deploys to PetHost (a Docker Compose host) after it is complete and tested locally. See section 3 and phase 7 in [PLAN.md](PLAN.md).
+See [DEPLOY.md](DEPLOY.md).

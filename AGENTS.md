@@ -22,7 +22,7 @@ This file tells AI coding agents (Claude, Codex, Copilot and others) how to work
 | Audit log | `django-simple-history` |
 | Tests | pytest, pytest-django, factory_boy |
 | Lint and format | ruff |
-| Hosting | Docker Compose on PetHost |
+| Hosting | Docker Compose on PetHost (`pethost.compose.yaml`, see DEPLOY.md) |
 
 Do not add Node, a SPA framework, Redis, Celery or a paid service without the owner's approval.
 
@@ -30,12 +30,18 @@ Do not add Node, a SPA framework, Redis, Celery or a paid service without the ow
 
 ```
 config/            Django project: settings (base, dev, test, prod), urls, wsgi
-apps/<name>/       One Django app per business area (core, catalog, inventory, cart, orders, shipping, accounts)
+apps/core/         Home, pages, health check, roles, dashboard, staff activity, seed_demo
+apps/catalog/      Categories, attributes, products, variants, tiers, pricing.py, search.py, importer.py
+apps/inventory/    Lots, stock items, stock movements, services.py (all stock changes)
+apps/shipping/     Shipping settings (single row), cities, services.quote()
+apps/cart/         Session cart (cart.py) and cart views
+apps/orders/       Orders, services.place_order(), workflow.transition(), notifications, admin
+apps/accounts/     Login by phone, signup, account page, order tracking, wholesale buyers
 apps/<name>/tests/ Tests for that app
 templates/         Site-wide templates (base.html, partials/)
 apps/<name>/templates/<name>/  App templates
 static/            Site-wide static files
-docker/            Container entrypoint
+docker/            Container entrypoint, Caddyfile and backup script for production
 PLAN.md            Product plan and phases
 ```
 
@@ -116,7 +122,19 @@ Commit messages: an imperative summary line ("Add price tiers to variants"), the
 - Test the main views with the Django test client, including HTMX requests (`HTTP_HX_REQUEST="true"`).
 - A bug fix comes with a test that fails before the fix.
 
-## 9. Things to avoid
+## 9. Key entry points
+
+| Need | Use |
+|---|---|
+| Price for a quantity | `apps.catalog.pricing.unit_price()` and `quantity_error()` |
+| Change stock | `apps.inventory.services` (`receive`, `reserve`, `release`, `dispatch`, `return_to_stock`, `adjust`) |
+| Delivery and COD fees | `apps.shipping.services.quote()` |
+| Create an order | `apps.orders.services.place_order()` |
+| Change an order status | `apps.orders.workflow.transition()` |
+| Tell the owner or customer | `apps.orders.notifications` |
+| Demo data | `manage.py seed_demo` (never on the live store) |
+
+## 10. Things to avoid
 
 - Do not hard-code categories, attributes, cities, fees or bank details. They are data in the admin.
 - Do not add a feature that needs a paid service.

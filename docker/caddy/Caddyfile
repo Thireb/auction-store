@@ -1,0 +1,23 @@
+# Production front door on PetHost. PetHost ends HTTPS and forwards plain HTTP here.
+{
+	auto_https off
+	admin off
+}
+
+:8080 {
+	encode gzip
+
+	# Uploaded product images and payment screenshots, read-only from the media volume.
+	handle_path /media/* {
+		root * /srv/media
+		header Cache-Control "public, max-age=604800"
+		file_server
+	}
+
+	handle {
+		reverse_proxy web:8000 {
+			# Keep the original scheme from the PetHost proxy, so Django knows the request was HTTPS.
+			header_up X-Forwarded-Proto {header.X-Forwarded-Proto}
+		}
+	}
+}
