@@ -2,7 +2,7 @@
 
 An online store for the Pakistani market. It sells Dubai auction items and export leftovers: furniture, mobile accessories, decor, shoes, watches and more. Customers buy single pieces or bulk quantities. Payment is Cash on Delivery (COD) only.
 
-> Status: planning. See [PLAN.md](PLAN.md) for the full plan, the data model and the phases. No application code exists yet.
+> Status: in development. See [PLAN.md](PLAN.md) for the full plan, the data model and the phases.
 
 ## Features (planned)
 
@@ -24,7 +24,9 @@ An online store for the Pakistani market. It sells Dubai auction items and expor
 - Docker Compose for local development and for hosting on PetHost
 - pytest, factory_boy and ruff for tests and lint
 
-## Local development (after Phase 1)
+## Local development
+
+You need Docker with Docker Compose.
 
 1. Copy the example environment file and edit the values:
 
@@ -32,21 +34,21 @@ An online store for the Pakistani market. It sells Dubai auction items and expor
    cp .env.example .env
    ```
 
-2. Start the app and the database:
+2. Start the app and the database. The app applies migrations and creates the staff roles at start:
 
    ```bash
    docker compose up --build
    ```
 
-3. Create the database tables, the owner account and demo data:
+3. Create the owner account (a superuser):
 
    ```bash
-   docker compose exec web python manage.py migrate
    docker compose exec web python manage.py createsuperuser
-   docker compose exec web python manage.py seed_demo
    ```
 
 4. Open http://localhost:8000 for the store and http://localhost:8000/admin/ for the back office.
+
+Without Docker: create a PostgreSQL database, set `DATABASE_URL` in `.env` to it, then run `pip install -r requirements-dev.txt`, `python manage.py migrate` and `python manage.py runserver`.
 
 ## Tests and lint
 
