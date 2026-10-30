@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "simple_history",
     # Local
     "apps.core",
+    "apps.catalog",
 ]
 
 MIDDLEWARE = [
