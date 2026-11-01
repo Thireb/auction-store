@@ -1,6 +1,8 @@
+import datetime
 from decimal import Decimal
 
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -200,11 +202,32 @@ class ProductQuerySet(models.QuerySet):
     def out_of_stock(self):
         return self.exclude(pk__in=self.in_stock().values("pk"))
 
+    def held_for_lot(self, now=None):
+        """Products whose stock is only in lots that open later. They stay hidden until then."""
+        from apps.inventory.models import StockItem
+
+        now = now or timezone.now()
+        stock = StockItem.objects.filter(
+            variant__product=models.OuterRef("pk"), quantity_on_hand__gt=0
+        )
+        waiting = stock.filter(lot__opens_at__gt=now)
+        ready = stock.filter(
+            Q(lot__isnull=True) | Q(lot__opens_at__isnull=True) | Q(lot__opens_at__lte=now)
+        )
+        return self.filter(models.Exists(waiting)).exclude(models.Exists(ready))
+
     def listed(self):
-        """Products a customer sees: active and in stock. Most items are one-off pieces that
-        never come back, so a product with no stock disappears from lists, search and its page.
+        """Products a customer sees: active, in stock and not held for a lot that opens later.
+        Most items are one-off pieces that never come back, so a product with no stock
+        disappears from lists, search and its page.
         """
-        return self.visible().in_stock()
+        return self.visible().in_stock().exclude(pk__in=self.held_for_lot().values("pk"))
+
+    def recently_sold(self, days=None):
+        """Sold-out products that the store still shows, with a "Sold" stamp, for a few days."""
+        days = settings.SOLD_VISIBLE_DAYS if days is None else days
+        since = timezone.now() - datetime.timedelta(days=days)
+        return self.visible().filter(sold_out_at__gte=since).order_by("-sold_out_at")
 
 
 class Product(SluggedModel):
@@ -223,6 +246,11 @@ class Product(SluggedModel):
     )
     description = models.TextField(blank=True)
     condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default="new")
+    condition_notes = models.TextField(
+        blank=True,
+        help_text="What staff checked, one note on each line. "
+        'For example "Small scuff on one wheel. See photo 4."',
+    )
     origin_note = models.CharField(
         max_length=200, blank=True, help_text='For example "Dubai auction, March 2026".'
     )
@@ -259,6 +287,22 @@ class Product(SluggedModel):
 
     def get_absolute_url(self):
         return reverse("catalog:product", args=[self.slug])
+
+    CONDITION_SHORT = {
+        "new": "New",
+        "open_box": "Open box",
+        "used_like_new": "Like new",
+        "used_good": "Good",
+        "as_is": "As is",
+    }
+
+    @property
+    def condition_short(self):
+        return self.CONDITION_SHORT.get(self.condition, self.get_condition_display())
+
+    @property
+    def condition_note_list(self):
+        return [line.strip() for line in self.condition_notes.splitlines() if line.strip()]
 
     @property
     def main_image(self):
@@ -298,6 +342,25 @@ class Product(SluggedModel):
         else:
             return
         Product.objects.filter(pk=self.pk).update(sold_out_at=self.sold_out_at)
+
+    @property
+    def pieces_left(self):
+        """Units a customer can buy now, or None when a variant does not track stock."""
+        variants = self.active_variants()
+        if not variants or any(not v.track_stock for v in variants):
+            return None
+        return sum(max(v.stock_available, 0) for v in variants)
+
+    @property
+    def bulk_hint(self):
+        """The lowest public bulk price as (min quantity, unit price), or None."""
+        tiers = [
+            t for v in self.active_variants() for t in v.price_tiers.all() if not t.wholesale_only
+        ]
+        if not tiers:
+            return None
+        best = min(tiers, key=lambda t: (t.min_quantity, t.unit_price))
+        return best.min_quantity, best.unit_price
 
     @property
     def min_price(self):
@@ -421,3 +484,22 @@ class ProductAttributeValue(models.Model):
 
     def __str__(self):
         return f"{self.attribute.name}: {self.value}"
+
+
+class SavedProduct(models.Model):
+    """A product a signed-in customer saved. Guests save in the session (see saved.py)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="saved_products", on_delete=models.CASCADE
+    )
+    product = models.ForeignKey(Product, related_name="saved_by", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "product"], name="unique_saved_product")
+        ]
+
+    def __str__(self):
+        return f"{self.user} saved {self.product}"

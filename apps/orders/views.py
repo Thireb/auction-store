@@ -5,9 +5,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.cart.cart import Cart
+from apps.catalog.views import product_queryset
+from apps.inventory import lots
 from apps.shipping.models import City, ShippingSettings
 
-from . import services
+from . import services, timeline
 from .forms import AdvanceProofForm, CheckoutForm
 from .models import Order
 
@@ -81,17 +83,37 @@ def checkout(request):
 def _recent_order(request, number):
     if number not in request.session.get(RECENT_ORDERS_KEY, []):
         raise Http404
-    return get_object_or_404(Order.objects.prefetch_related("items"), number=number)
+    return get_object_or_404(
+        Order.objects.prefetch_related("items__variant__product", "shipments"), number=number
+    )
+
+
+def _while_you_wait(order, limit=4):
+    """Pieces to show after an order: from the lot of an ordered piece, else the newest."""
+    items = [item for item in order.items.all() if item.variant_id]
+    ordered = [item.variant.product_id for item in items]
+    products = product_queryset().exclude(pk__in=ordered)
+    lot = lots.lot_for_product(items[0].variant.product) if items else None
+    return lot, list((lots.lot_products(products, lot) if lot else products)[:limit])
+
+
+def _thanks_context(request, order, proof_form):
+    lot, suggestions = _while_you_wait(order)
+    return {
+        "order": order,
+        "steps": timeline.steps(order),
+        "lot": lot,
+        "suggestions": suggestions,
+        "proof_form": proof_form,
+        "payment_details": ShippingSettings.load().advance_payment_details,
+    }
 
 
 def thanks(request, number):
     order = _recent_order(request, number)
-    context = {
-        "order": order,
-        "proof_form": AdvanceProofForm(),
-        "payment_details": ShippingSettings.load().advance_payment_details,
-    }
-    return render(request, "orders/thanks.html", context)
+    return render(
+        request, "orders/thanks.html", _thanks_context(request, order, AdvanceProofForm())
+    )
 
 
 @require_POST
@@ -104,9 +126,5 @@ def upload_advance_proof(request, number):
         form.save()
         messages.success(request, "Thank you. We will check your payment and call you.")
         return redirect(order.get_thanks_url())
-    context = {
-        "order": order,
-        "proof_form": form,
-        "payment_details": ShippingSettings.load().advance_payment_details,
-    }
+    context = _thanks_context(request, order, form)
     return render(request, "orders/thanks.html", context, status=400)

@@ -67,6 +67,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.store",
                 "apps.cart.context_processors.cart_count",
+                "apps.catalog.context_processors.storefront",
                 "apps.portal.context_processors.portal",
             ],
         },
@@ -113,6 +114,9 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="store@example.com")
 ORDER_ALERT_EMAIL = env("ORDER_ALERT_EMAIL", default="")
 
 STORE_NAME = env("STORE_NAME", default="Auction Store")
+
+# Storefront: sold pieces stay on show (with a "Sold" stamp) for this many days.
+SOLD_VISIBLE_DAYS = env.int("SOLD_VISIBLE_DAYS", default=3)
 
 # Fake order protection.
 MAX_OPEN_ORDERS_PER_PHONE = env.int("MAX_OPEN_ORDERS_PER_PHONE", default=3)

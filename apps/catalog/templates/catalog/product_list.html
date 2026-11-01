@@ -3,20 +3,22 @@
 {% block title %}{{ title }} | {{ STORE_NAME }}{% endblock %}
 
 {% block content %}
-  {% if category %}{% include "catalog/partials/breadcrumbs.html" %}{% endif %}
-  <h1 class="text-2xl font-bold">{{ title }}</h1>
-  {% if category.description %}<p class="mt-1 text-gray-600">{{ category.description }}</p>{% endif %}
-  {% if subcategories %}
-    <div class="mt-3 flex flex-wrap gap-2 text-sm">
-      {% for sub in subcategories %}<a class="px-3 py-1 rounded-full border bg-white" href="{{ sub.get_absolute_url }}">{{ sub.name }}</a>{% endfor %}
+  <div class="wrap">
+    {% include "catalog/partials/breadcrumbs.html" %}
+    <div class="section" style="padding-bottom: 24px">
+      <h1 class="h1" style="font-size: clamp(40px, 5vw, 64px)">{{ title }}</h1>
+      {% if category.description %}<p class="lead" style="margin-top: 12px">{{ category.description }}</p>{% endif %}
+      {% if subcategories %}
+        <div class="subcats">{% for sub in subcategories %}<a class="chip" href="{{ sub.get_absolute_url }}">{{ sub.name }}</a>{% endfor %}</div>
+      {% endif %}
     </div>
-  {% endif %}
 
-  <div class="mt-6 grid md:grid-cols-4 gap-6">
-    <details class="md:block" x-data x-init="$el.open = window.innerWidth >= 768">
-      <summary class="md:hidden cursor-pointer font-medium py-1">Filters and sort</summary>
-      <div class="mt-2 md:mt-0">{% include "catalog/partials/filters.html" %}</div>
-    </details>
-    <div class="md:col-span-3">{% include "catalog/partials/results.html" %}</div>
+    <div class="list-layout" style="padding-bottom: 48px">
+      <details class="filters-box" x-data x-init="$el.open = window.innerWidth > 900">
+        <summary class="btn btn-line btn-sm filter-toggle">{% include "partials/icon.html" with name="filter" size=18 %}Filters and sort</summary>
+        {% include "catalog/partials/filters.html" %}
+      </details>
+      <div>{% include "catalog/partials/results.html" %}</div>
+    </div>
   </div>
 {% endblock %}

@@ -1,0 +1,35 @@
+{# Products of a lot with quick filters. Swapped by HTMX when a chip is pressed. #}
+<div id="lot-grid" class="lot-grid">
+  <div class="section-head">
+    <h2 class="h2">{% if grid_title %}{{ grid_title }}{% else %}Pieces in lot {{ lot.reference }}{% endif %}</h2>
+    <div class="row" role="group" aria-label="Filter pieces" style="gap: 8px">
+      {% for key, label, on in chips %}
+        <a href="{{ lot.get_absolute_url }}?f={{ key }}" class="chip{% if on %} is-on{% endif %}" {% if on %}aria-current="true"{% endif %}
+           hx-get="{{ lot.get_absolute_url }}?f={{ key }}" hx-target="#lot-grid" hx-swap="outerHTML transition:true">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  <div id="product-grid" class="grid-products">
+    {% for product in products %}
+      {% include "catalog/partials/product_card.html" with vt=True %}
+    {% empty %}
+      <div class="empty" style="grid-column: 1 / -1">
+        <p class="h3">Nothing here matches this filter.</p>
+        <p class="muted">Try "Everything" to see every piece still in this lot.</p>
+      </div>
+    {% endfor %}
+  </div>
+  {% if page_obj %}
+    {% if page_obj.has_other_pages %}
+      <nav class="pager" aria-label="Pages">
+        {% if page_obj.has_previous %}<a class="btn btn-line btn-sm" href="?f={{ chip }}&amp;page={{ page_obj.previous_page_number }}" hx-get="?f={{ chip }}&amp;page={{ page_obj.previous_page_number }}" hx-target="#lot-grid" hx-swap="outerHTML show:#lot-grid:top">Previous</a>{% endif %}
+        <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a class="btn btn-line btn-sm" href="?f={{ chip }}&amp;page={{ page_obj.next_page_number }}" hx-get="?f={{ chip }}&amp;page={{ page_obj.next_page_number }}" hx-target="#lot-grid" hx-swap="outerHTML show:#lot-grid:top">Next</a>{% endif %}
+      </nav>
+    {% endif %}
+  {% elif lot.items_left > products|length %}
+    <div class="row" style="justify-content: center; margin-top: 36px">
+      <a href="{{ lot.get_absolute_url }}" class="btn btn-line">See all {{ lot.items_left }} items in this lot</a>
+    </div>
+  {% endif %}
+</div>

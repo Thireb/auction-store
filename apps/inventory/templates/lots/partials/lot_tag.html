@@ -1,0 +1,4 @@
+{# The yellow lot tag. Needs `lot`; `big` for the hero size; `link` to make it a link. #}
+{% if link %}<a href="{{ lot.get_absolute_url }}" class="lot-tag{% if big %} lot-tag-lg{% endif %}">{% else %}<span class="lot-tag{% if big %} lot-tag-lg{% endif %}">{% endif %}
+  <span class="lot-word">Lot</span><span class="lot-no">{{ lot.reference }}</span>
+{% if link %}</a>{% else %}</span>{% endif %}

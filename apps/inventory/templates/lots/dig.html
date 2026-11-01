@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Dig through lot {{ lot.reference }} | {{ STORE_NAME }}{% endblock %}
+{% block body_class %}dig-page{% endblock %}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+  {{ dig_data|json_script:"dig-data" }}
+  <div class="dig" x-data="dig" @keydown.left="decide('left')" @keydown.right="decide('right')">
+    <div class="dig-top">
+      <a href="{{ lot.get_absolute_url }}" class="icon-btn" aria-label="Close and go back to lot {{ lot.reference }}">{% include "partials/icon.html" with name="close" %}</a>
+      <div class="stack" style="gap: 2px; align-items: center">
+        {% include "lots/partials/lot_tag.html" %}
+        <span class="small" style="color: var(--on-ink-muted)" x-text="done ? 'All seen' : 'Piece ' + progress" aria-live="polite"></span>
+      </div>
+      <a href="{% url 'catalog:saved' %}" class="dig-count" aria-label="Saved pieces">
+        {% include "partials/icon.html" with name="heart" size=18 %}<span x-text="shelf.length">0</span>
+      </a>
+    </div>
+    <div class="dig-progress" aria-hidden="true"><div :style="'width:' + progressWidth"></div></div>
+
+    <template x-if="!done">
+      <div class="stack" style="flex: 1; gap: 0">
+        <div class="dig-stack">
+          <template x-if="next">
+            <div class="dig-card is-under" :style="nextStyle" aria-hidden="true">
+              <div class="media"><template x-if="next.image"><img :src="next.image" alt=""></template></div>
+              <div class="dig-info"><span class="h3" x-text="next.title"></span><span class="price" x-text="next.price"></span></div>
+            </div>
+          </template>
+          <a class="dig-card" :href="top.url" :style="topStyle" @click="open($event)"
+             @pointerdown="down($event)" @pointermove="move($event)" @pointerup="up()" @pointercancel="up()"
+             :aria-label="top.title + ', ' + top.price + '. Open the piece.'">
+            <div class="media">
+              <template x-if="top.image"><img :src="top.image" alt="" draggable="false"></template>
+              <span class="pill pill-top" x-text="top.condition"></span>
+              <template x-if="top.left"><span class="pill pill-bottom" style="left: auto; right: 12px; top: 12px; bottom: auto" x-text="top.left"></span></template>
+              <span class="dig-stamp save" :style="'opacity:' + saveStamp" aria-hidden="true">SAVE</span>
+              <span class="dig-stamp skip" :style="'opacity:' + skipStamp" aria-hidden="true">SKIP</span>
+            </div>
+            <div class="dig-info">
+              <span class="h3" x-text="top.title"></span>
+              <span class="muted small" x-text="top.note"></span>
+              <span class="price" style="font-size: 30px" x-text="top.price"></span>
+            </div>
+          </a>
+        </div>
+        <p class="dig-hint">Swipe right to save. Swipe left to skip.</p>
+        <div class="dig-actions">
+          <button type="button" class="round round-dim" @click="decide('left')" aria-label="Skip this piece">{% include "partials/icon.html" with name="close" size=26 %}</button>
+          <a class="round round-dim round-sm" :href="top.url" aria-label="See details">{% include "partials/icon.html" with name="info" %}</a>
+          <button type="button" class="round round-tag" @click="decide('right')" aria-label="Save this piece">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <template x-if="done">
+      <div class="dig-done">
+        <h1 class="h1" style="font-size: 48px">You saw every piece we picked from this lot.</h1>
+        <p x-text="shelf.length ? 'You saved ' + shelf.length + '. Saved pieces can still sell to someone else, so do not wait too long.' : 'Nothing caught your eye this time. New lots bring new pieces.'"></p>
+        <a href="{% url 'catalog:saved' %}" class="btn btn-tag btn-lg">See my saved pieces</a>
+        <a href="{{ lot.get_absolute_url }}" class="btn btn-line-light btn-lg">See the whole lot</a>
+        <button type="button" class="link-btn" style="color: var(--on-ink-muted)" @click="restart()">Dig again</button>
+      </div>
+    </template>
+
+    <div class="shelf" aria-label="Saved in this session">
+      <span class="small" style="color: var(--on-ink-muted); width: 52px; flex: none">Saved</span>
+      <template x-for="item in shelf" :key="item.id">
+        <a class="media" :href="item.url" :aria-label="item.title"><template x-if="item.image"><img :src="item.image" alt=""></template></a>
+      </template>
+    </div>
+  </div>
+{% endblock %}

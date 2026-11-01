@@ -1,0 +1,7 @@
+{# A live countdown. Needs `seconds`. #}
+<div class="countdown" x-data="countdown({{ seconds }})" role="timer" aria-label="Time until the lot opens">
+  <div><span class="stencil" x-text="days">0</span><span>days</span></div>
+  <div><span class="stencil" x-text="hours">00</span><span>hours</span></div>
+  <div><span class="stencil" x-text="minutes">00</span><span>min</span></div>
+  <div><span class="stencil" x-text="secs">00</span><span>sec</span></div>
+</div>

@@ -13,91 +13,154 @@
 {% endblock %}
 
 {% block content %}
-  {% include "catalog/partials/breadcrumbs.html" %}
-  <div class="grid md:grid-cols-2 gap-8">
-    <div x-data="{ current: 0 }">
-      <div class="aspect-square bg-gray-100 rounded overflow-hidden flex items-center justify-center">
-        {% for image in images %}
-          <img x-show="current === {{ forloop.counter0 }}" {% if not forloop.first %}x-cloak{% endif %}
-               src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.title }}" class="object-contain w-full h-full">
-        {% empty %}
-          <span class="text-gray-400">No image</span>
-        {% endfor %}
-      </div>
-      {% if images|length > 1 %}
-        <div class="mt-2 flex gap-2 overflow-x-auto">
+  <div class="wrap">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="{% url 'core:home' %}">Home</a>
+      {% for crumb in breadcrumbs %}<span aria-hidden="true">/</span><a href="{{ crumb.get_absolute_url }}">{{ crumb.name }}</a>{% endfor %}
+    </nav>
+
+    <div class="pdp">
+      <section class="gallery" aria-label="Photos" x-data="{ current: 0 }">
+        <div class="media" style="view-transition-name: p{{ product.pk }}">
           {% for image in images %}
-            <button type="button" @click="current = {{ forloop.counter0 }}"
-                    :class="current === {{ forloop.counter0 }} ? 'ring-2 ring-black' : ''" class="w-16 h-16 shrink-0 rounded overflow-hidden">
-              <img src="{{ image.image.url }}" alt="" class="object-cover w-full h-full">
-            </button>
+            <img x-show="current === {{ forloop.counter0 }}" {% if not forloop.first %}x-cloak{% endif %}
+                 src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.title }}"{% if not forloop.first %} loading="lazy"{% endif %}>
+          {% empty %}
+            <span class="no-photo">No photo yet</span>
           {% endfor %}
         </div>
-      {% endif %}
-    </div>
-
-    <div x-data="{ variants: JSON.parse(document.getElementById('variant-data').textContent), selected: 0 }">
-      {{ variant_data|json_script:"variant-data" }}
-      <h1 class="text-2xl font-bold">{{ product.title }}</h1>
-      <p class="text-sm text-gray-500 mt-1">
-        {{ product.get_condition_display }}{% if product.brand %} · {{ product.brand.name }}{% endif %}{% if product.origin_note %} · {{ product.origin_note }}{% endif %}
-      </p>
-
-      {% if variants %}
-        <p class="mt-4 text-2xl font-semibold" id="price">
-          <span x-text="'Rs ' + variants[selected].price.toLocaleString('en-US')">{{ variants.0.price|rupees }}</span>
-          <s class="text-base text-gray-400" x-show="variants[selected].compare" x-cloak
-             x-text="variants[selected].compare ? 'Rs ' + variants[selected].compare.toLocaleString('en-US') : ''"></s>
-        </p>
-        {% if variants|length > 1 %}
-          <label class="block mt-4 text-sm font-medium" for="variant-select">Option</label>
-          <select id="variant-select" class="mt-1 border rounded px-3 py-2 bg-white" x-model.number="selected">
-            {% for v in variants %}<option value="{{ forloop.counter0 }}">{{ v.name|default:v.sku }}</option>{% endfor %}
-          </select>
+        {% if images|length > 1 %}
+          <div class="thumbs">
+            {% for image in images %}
+              <button type="button" @click="current = {{ forloop.counter0 }}" :aria-pressed="current === {{ forloop.counter0 }}"
+                      aria-label="Photo {{ forloop.counter }}{% if image.alt_text %}: {{ image.alt_text }}{% endif %}">
+                <img src="{{ image.image.url }}" alt="" loading="lazy">
+              </button>
+            {% endfor %}
+          </div>
         {% endif %}
-        <template x-if="variants[selected].tiers.length">
-          <table class="mt-4 text-sm border rounded bg-white" id="price-tiers">
-            <thead><tr class="bg-gray-100"><th class="text-left px-3 py-1">Quantity</th><th class="text-left px-3 py-1">Price each</th></tr></thead>
-            <tbody>
-              <tr><td class="px-3 py-1" x-text="variants[selected].min_qty + '+'"></td><td class="px-3 py-1" x-text="'Rs ' + variants[selected].price.toLocaleString('en-US')"></td></tr>
-              <template x-for="tier in variants[selected].tiers" :key="tier.min + '-' + tier.wholesale">
-                <tr><td class="px-3 py-1" x-text="tier.min + '+' + (tier.wholesale ? ' (wholesale)' : '')"></td><td class="px-3 py-1" x-text="'Rs ' + tier.price.toLocaleString('en-US')"></td></tr>
+      </section>
+
+      <section class="buy" {% if variants %}x-data="buyBox"{% endif %}>
+        {{ variant_data|json_script:"variant-data" }}
+        {% if lot %}
+          <div class="row">
+            {% include "lots/partials/lot_tag.html" with link=True %}
+            <a href="{{ lot.get_absolute_url }}" class="small">{{ lot.title }}</a>
+          </div>
+        {% endif %}
+        <div class="stack" style="gap: 6px">
+          <h1 class="h1" style="font-size: clamp(36px, 4.4vw, 56px); line-height: .98">{{ product.title }}</h1>
+          <span class="muted">{% if product.brand %}{{ product.brand.name }}, {% endif %}{{ product.category.name }}{% if product.origin_note %}. {{ product.origin_note }}{% endif %}</span>
+        </div>
+
+        {% if variants %}
+          <div class="row" style="align-items: baseline; gap: 14px" aria-live="polite">
+            <span class="price-big" x-text="unitText" x-effect="flip; $el.classList.remove('price-flip'); void $el.offsetWidth; flip && $el.classList.add('price-flip')">{{ variants.0.price|rupees }}</span>
+            {% if variants.0.compare_at_price %}<s class="muted" x-show="v.compare" x-text="v.compare ? 'Rs ' + v.compare.toLocaleString('en-US') : ''">{{ variants.0.compare_at_price|rupees }}</s>{% endif %}
+            <span class="muted" x-text="note"></span>
+          </div>
+
+          {% if variants|length > 1 %}
+            <div class="field">
+              <label for="variant-select">Option</label>
+              <select id="variant-select" @change="pick(parseInt($event.target.value, 10))">
+                {% for v in variants %}<option value="{{ forloop.counter0 }}"{% if not v.in_stock %} disabled{% endif %}>{{ v.name|default:v.sku }}{% if not v.in_stock %} (sold){% endif %}</option>{% endfor %}
+              </select>
+            </div>
+          {% endif %}
+
+          <template x-if="v.tiers.length">
+            <div class="ladder" id="price-tiers" aria-label="Price for each quantity">
+              <template x-for="r in rungs" :key="r.key">
+                <div class="rung" :class="r.on && 'is-on'"><span x-text="r.label"></span><strong x-text="r.price"></strong></div>
               </template>
-            </tbody>
-          </table>
-        </template>
-        <p class="mt-2 text-sm text-gray-600" x-show="variants[selected].min_qty > 1 || variants[selected].step > 1" x-cloak>
-          Minimum order <span x-text="variants[selected].min_qty"></span><span x-show="variants[selected].step > 1">, in steps of <span x-text="variants[selected].step"></span></span>.
-        </p>
-        <p class="mt-2 text-sm font-medium text-red-600" x-show="!variants[selected].in_stock" x-cloak>Sold out</p>
-        <form id="buy-box" class="mt-6 flex flex-wrap items-end gap-3" method="post" action="{% url 'cart:add' %}"
-              hx-post="{% url 'cart:add' %}" hx-target="#buy-result" x-show="variants[selected].in_stock">
-          {% csrf_token %}
-          <input type="hidden" name="variant" :value="variants[selected].id" value="{{ variants.0.id }}">
-          <label class="text-sm">Quantity
-            <input type="number" name="quantity" class="block mt-1 w-24 border rounded px-2 py-1"
-                   value="{{ variants.0.min_order_qty }}" :value="variants[selected].min_qty"
-                   :min="variants[selected].min_qty" :step="variants[selected].step"
-                   :max="variants[selected].available ?? ''">
-          </label>
-          <button type="submit" class="px-4 py-2 rounded bg-black text-white">Add to cart</button>
-        </form>
-        <div id="buy-result" class="mt-2"></div>
-      {% else %}
-        <p class="mt-4 text-gray-500">Not available.</p>
-      {% endif %}
+            </div>
+          </template>
+          <p class="help" x-show="v.min_qty > 1 || v.step > 1" x-cloak>
+            Minimum order <span x-text="v.min_qty"></span><span x-show="v.step > 1">, in steps of <span x-text="v.step"></span></span>.
+          </p>
 
-      <p class="mt-6 text-sm">Cash on Delivery across Pakistan.</p>
+          <p class="error" x-show="!v.in_stock" x-cloak>This option is sold.</p>
+          <div class="row" x-show="v.in_stock">
+          <form id="buy-box" class="row" style="flex: 1 1 320px" method="post" action="{% url 'cart:add' %}"
+                hx-post="{% url 'cart:add' %}" hx-target="#buy-result">
+            {% csrf_token %}
+            <input type="hidden" name="variant" :value="v.id" value="{{ variants.0.id }}">
+            <div class="qty" role="group" aria-label="Quantity">
+              <button type="button" @click="dec()" :disabled="qty - v.step < v.min_qty" aria-label="One less">&minus;</button>
+              <label for="qty-input" class="sr-only">Quantity</label>
+              <input id="qty-input" type="number" name="quantity" inputmode="numeric" x-model.number="qty" @change="fix()"
+                     value="{{ variants.0.min_order_qty }}" :min="v.min_qty" :step="v.step" :max="v.available ?? ''">
+              <button type="button" @click="inc()" :disabled="qty + v.step > max" aria-label="One more">+</button>
+            </div>
+            <button type="submit" class="btn btn-ink btn-lg" style="flex: 1 1 200px">Add to cart</button>
+          </form>
+          {% include "catalog/partials/heart.html" with inline=True %}
+          </div>
+          <div id="buy-result" aria-live="polite"></div>
+          {% with left=product.pieces_left %}
+            <p class="muted small" style="margin: -8px 0 0">{% if left == 1 %}The only piece. {% elif left and left < 10 %}{{ left }} left. {% endif %}Pay cash when it arrives.</p>
+          {% endwith %}
 
-      {% if attributes %}
-        <table class="mt-6 text-sm w-full">
-          {% for attribute, value in attributes %}
-            <tr class="border-t"><th class="text-left py-1 pr-4 font-medium">{{ attribute.name }}</th><td>{{ value }}{% if attribute.unit %} {{ attribute.unit }}{% endif %}</td></tr>
-          {% endfor %}
-        </table>
-      {% endif %}
+          {% if cities %}
+            <div class="panel stack" style="gap: 10px">
+              <div class="field">
+                <label for="quote-city">Delivery to</label>
+                <select id="quote-city" name="city" hx-get="{% url 'cart:quote' %}" hx-include="#buy-box" hx-target="#quote" hx-trigger="change">
+                  <option value="">Choose your city</option>
+                  {% for city in cities %}<option value="{{ city.pk }}">{{ city.name }}</option>{% endfor %}
+                </select>
+              </div>
+              <p id="quote" class="help" aria-live="polite">Choose your city to see the delivery fee and days.</p>
+            </div>
+          {% endif %}
+        {% else %}
+          <p class="muted">This piece is not for sale right now.</p>
+        {% endif %}
 
-      {% if product.description %}<div class="mt-6 text-sm whitespace-pre-line">{{ product.description }}</div>{% endif %}
+        <div class="panel stack" style="gap: 14px">
+          <h2 class="h3">Condition: {{ product.condition_short|lower }}</h2>
+          <div class="scale" role="img" aria-label="Condition {{ product.condition_short }}, on a scale from new to as is">
+            {% for label, filled, here in condition_steps %}<div class="{% if filled %}is-filled{% endif %}{% if here %} is-here{% endif %}">{{ label }}</div>{% endfor %}
+          </div>
+          {% if product.condition_note_list %}
+            <ul class="notes">{% for note in product.condition_note_list %}<li>{{ note }}</li>{% endfor %}</ul>
+          {% endif %}
+        </div>
+
+        {% if attributes %}
+          <dl class="specs">
+            {% for attribute, value in attributes %}<dt>{{ attribute.name }}</dt><dd>{{ value }}{% if attribute.unit %} {{ attribute.unit }}{% endif %}</dd>{% endfor %}
+          </dl>
+        {% endif %}
+
+        {% if product.description %}<div class="prose">{{ product.description|linebreaks }}</div>{% endif %}
+      </section>
     </div>
   </div>
+
+  {% if more %}
+    <section class="wrap section" style="padding-top: 0">
+      <div class="section-head">
+        <h2 class="h2">{% if lot %}More from lot {{ lot.reference }}{% else %}More in {{ product.category.name }}{% endif %}</h2>
+        {% if lot %}<a href="{% url 'lots:dig' lot.slug %}">Dig through this lot</a>{% else %}<a href="{{ product.category.get_absolute_url }}">See all</a>{% endif %}
+      </div>
+      <div class="rail">{% for product in more %}{% include "catalog/partials/product_card.html" %}{% endfor %}</div>
+    </section>
+  {% endif %}
+
+  {% if recent %}
+    <section class="wrap section" style="padding-top: 0">
+      <div class="section-head"><h2 class="h2">You looked at</h2></div>
+      <div class="rail">{% for product in recent %}{% include "catalog/partials/product_card.html" %}{% endfor %}</div>
+    </section>
+  {% endif %}
+
+  {% if nearby %}
+    <section class="wrap" aria-label="Nearby categories">
+      <h2 class="h3">Browse nearby</h2>
+      <div class="subcats">{% for c in nearby %}<a href="{{ c.get_absolute_url }}" class="chip">{{ c.name }}</a>{% endfor %}</div>
+    </section>
+  {% endif %}
 {% endblock %}

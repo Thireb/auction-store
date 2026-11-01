@@ -4,15 +4,15 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 
 from apps.core.phone import normalize_pk_mobile
-from apps.orders.forms import INPUT
 
 from .models import WholesaleProfile
 
 
 def _style(form):
-    for field in form.fields.values():
-        if not isinstance(field.widget, forms.CheckboxInput):
-            field.widget.attrs.setdefault("class", INPUT)
+    """Autofill hints for the phone and password fields."""
+    for name, hint in [("username", "tel"), ("phone", "tel"), ("password", "current-password")]:
+        if name in form.fields:
+            form.fields[name].widget.attrs.setdefault("autocomplete", hint)
 
 
 class PhoneLoginForm(AuthenticationForm):

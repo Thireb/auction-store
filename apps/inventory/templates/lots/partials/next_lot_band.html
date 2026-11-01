@@ -1,0 +1,16 @@
+{# The dark band about the next lot. Needs `next_lot` and `next_seconds`. #}
+<section class="band" aria-label="Next lot">
+  <div class="wrap">
+    <div class="stack" style="gap: 6px">
+      <span style="color: var(--on-ink-muted)">Lot {{ next_lot.reference }} opens {{ next_lot.opens_at|date:"l j F" }} at {{ next_lot.opens_at|time:"g:i A" }}</span>
+      <a href="{{ next_lot.get_absolute_url }}" class="band-title" style="color: var(--white); text-decoration: none">{{ next_lot.title }}{% if next_lot.items_total %}: {{ next_lot.items_total }} item{{ next_lot.items_total|pluralize }}{% endif %}.</a>
+    </div>
+    <div class="row" style="gap: 24px">
+      {% include "lots/partials/countdown.html" with seconds=next_seconds %}
+      <div class="row">
+        {% if whatsapp_url %}<a href="{{ whatsapp_url }}" class="btn btn-tag" rel="noopener" target="_blank">Get a WhatsApp reminder</a>{% endif %}
+        <a href="{% url 'lots:calendar' next_lot.slug %}" class="btn btn-line-light">{% include "partials/icon.html" with name="calendar" size=20 %}Add to calendar</a>
+      </div>
+    </div>
+  </div>
+</section>

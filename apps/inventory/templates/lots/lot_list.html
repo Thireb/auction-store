@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Lots | {{ STORE_NAME }}{% endblock %}
+{% block meta_description %}Every lot of Dubai auction pieces and export leftovers: what is open now and what opens next.{% endblock %}
+
+{% block content %}
+  <div class="wrap section">
+    <h1 class="h1" style="max-width: 16ch">Every lot, open and coming.</h1>
+    <p class="lead" style="margin-top: 16px">A lot is one shipment from an auction or an exporter. Each one has different pieces, and most sell once.</p>
+  </div>
+
+  {% if upcoming %}
+    <section class="wrap" aria-labelledby="coming">
+      <h2 class="h2" id="coming" style="margin-bottom: 20px">Opening soon</h2>
+      <div class="lot-cards">
+        {% for lot in upcoming %}
+          <a href="{{ lot.get_absolute_url }}" class="lot-card is-dark">
+            {% include "lots/partials/lot_tag.html" %}
+            <span class="h3">{{ lot.title }}</span>
+            <span class="muted">Opens {{ lot.opens_at|date:"l j F" }} at {{ lot.opens_at|time:"g:i A" }}{% if lot.items_total %}. {{ lot.items_total }} item{{ lot.items_total|pluralize }}.{% endif %}</span>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="wrap section" aria-labelledby="open-now">
+    <h2 class="h2" id="open-now" style="margin-bottom: 20px">Open now</h2>
+    {% if open_lots %}
+      <div class="lot-cards">
+        {% for lot in open_lots %}
+          <a href="{{ lot.get_absolute_url }}" class="lot-card">
+            {% include "lots/partials/lot_tag.html" %}
+            <span class="h3">{{ lot.title }}</span>
+            <div class="meter-block">
+              <div class="row between small"><strong>{{ lot.items_left }} still here</strong><span class="muted">of {{ lot.items_total }}</span></div>
+              <div class="meter"><div class="meter-fill" style="width: {{ lot.left_percent }}%"></div></div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty"><p class="h3">No lot is open right now.</p><p class="muted">{% if upcoming %}The next one opens soon. Add it to your calendar from its page.{% else %}Check back soon, or see <a href="{% url 'catalog:product_list' %}">every piece in the store</a>.{% endif %}</p></div>
+    {% endif %}
+  </section>
+
+  {% if past %}
+    <section class="wrap" aria-labelledby="sold-out">
+      <h2 class="h2" id="sold-out" style="margin-bottom: 20px">Sold out</h2>
+      <div class="lot-cards">
+        {% for lot in past %}
+          <a href="{{ lot.get_absolute_url }}" class="lot-card is-done">
+            {% include "lots/partials/lot_tag.html" %}
+            <span class="h3">{{ lot.title }}</span>
+            <span class="muted">All {{ lot.items_total }} item{{ lot.items_total|pluralize }} sold.</span>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

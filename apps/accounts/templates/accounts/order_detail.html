@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Order {{ order.number }} | {{ STORE_NAME }}{% endblock %}
 {% block content %}
-  <p class="mb-4 text-sm"><a class="underline" href="{% url 'accounts:account' %}">My account</a></p>
-  {% include "accounts/partials/order_status.html" %}
+  <div class="wrap section">
+    <div class="form-narrow stack" style="gap: 20px; max-width: 620px">
+      <a href="{% url 'accounts:account' %}">{% include "partials/icon.html" with name="back" size=18 %} My account</a>
+      {% include "accounts/partials/order_status.html" %}
+    </div>
+  </div>
 {% endblock %}

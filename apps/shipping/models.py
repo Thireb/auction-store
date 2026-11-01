@@ -32,6 +32,12 @@ class ShippingSettings(models.Model):
         blank=True,
         help_text="Bank, Easypaisa or JazzCash details for customers who pay an advance.",
     )
+    whatsapp_channel_url = models.URLField(
+        "WhatsApp channel link",
+        blank=True,
+        help_text="A free WhatsApp channel where you post new lots. "
+        "Customers see a reminder button. Empty hides it.",
+    )
     low_stock_default = models.PositiveIntegerField(
         "near empty at (store default)",
         default=2,

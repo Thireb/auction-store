@@ -1,16 +1,27 @@
-{% load money %}
-<div class="bg-white border rounded p-4">
-  <p class="text-lg font-semibold">Order {{ order.number }}</p>
-  <p class="mt-1">Status: <strong>{{ order.get_status_display }}</strong></p>
-  <p class="text-sm text-gray-500">Placed {{ order.created_at|date:"d M Y" }} · {{ order.city_name }}</p>
-  {% for shipment in order.shipments.all %}
-    <p class="mt-2 text-sm">Courier: {{ shipment.courier }}{% if shipment.tracking_number %}, tracking number {{ shipment.tracking_number }}{% endif %}</p>
-  {% endfor %}
-  <table class="mt-3 w-full text-sm">
-    {% for item in order.items.all %}
-      <tr class="border-t"><td class="py-1">{{ item.quantity }} x {{ item.product_title }}{% if item.variant_name %} ({{ item.variant_name }}){% endif %}</td><td class="text-right">{{ item.line_total|rupees }}</td></tr>
+{% load money order_timeline %}
+<div class="panel stack" style="gap: 16px">
+  <div class="row between">
+    <span class="order-stamp" style="font-size: 24px; animation: none">{{ order.number }}</span>
+    <span class="muted small">Placed {{ order.created_at|date:"j M Y" }}, delivery to {{ order.city_name }}</span>
+  </div>
+  <p style="margin: 0">Status: <strong>{{ order.get_status_display }}</strong></p>
+  {% order_steps order as steps %}
+  <ol class="timeline" aria-label="Order progress">
+    {% for step in steps %}
+      <li class="{{ step.state }}">
+        <span class="dot-col"><span class="dot"></span><span class="bar"></span></span>
+        <span class="text"><strong>{{ step.title }}</strong>{% if step.detail %}<span class="muted small">{{ step.detail }}</span>{% endif %}</span>
+      </li>
     {% endfor %}
-    <tr class="border-t font-semibold"><td class="py-1">Total</td><td class="text-right">{{ order.total|rupees }}</td></tr>
-    {% if order.advance_amount %}<tr><td class="py-1">Advance ({{ order.get_advance_status_display|lower }})</td><td class="text-right">{{ order.advance_amount|rupees }}</td></tr>{% endif %}
-  </table>
+  </ol>
+  {% for shipment in order.shipments.all %}
+    <p class="small" style="margin: 0">Courier: {{ shipment.courier }}{% if shipment.tracking_number %}, tracking number {{ shipment.tracking_number }}{% endif %}</p>
+  {% endfor %}
+  <div class="stack" style="gap: 8px; border-top: 1px solid var(--line); padding-top: 12px">
+    {% for item in order.items.all %}
+      <div class="row between small" style="flex-wrap: nowrap"><span>{{ item.quantity }} &times; {{ item.product_title }}{% if item.variant_name %} ({{ item.variant_name }}){% endif %}</span><span>{{ item.line_total|rupees }}</span></div>
+    {% endfor %}
+    <div class="row between" style="font-weight: 700"><span>Total</span><span>{{ order.total|rupees }}</span></div>
+    {% if order.advance_amount %}<div class="row between small"><span>Advance ({{ order.get_advance_status_display|lower }})</span><span>{{ order.advance_amount|rupees }}</span></div>{% endif %}
+  </div>
 </div>

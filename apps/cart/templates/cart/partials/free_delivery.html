@@ -1,0 +1,7 @@
+{% load money %}
+{% if free %}
+  <div class="free-box">
+    <span>{% if free.gap %}Add {{ free.gap|rupees }} more for free delivery.{% else %}Your delivery is free.{% endif %}</span>
+    <div class="meter" aria-hidden="true"><div class="meter-fill" style="width: 100%; transform: scaleX({{ free.ratio|stringformat:'.3f' }})"></div></div>
+  </div>
+{% endif %}

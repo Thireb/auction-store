@@ -1,10 +1,13 @@
 <div id="results">
-  <p class="text-sm text-gray-500">{{ page_obj.paginator.count }} product{{ page_obj.paginator.count|pluralize }}</p>
-  <div id="product-grid" class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-4">
+  <p class="results-count">{{ page_obj.paginator.count }} item{{ page_obj.paginator.count|pluralize }}</p>
+  <div id="product-grid" class="grid-products">
     {% for product in products %}
-      {% include "catalog/partials/product_card.html" %}
+      {% include "catalog/partials/product_card.html" with vt=True %}
     {% empty %}
-      <p class="col-span-full text-gray-500">No products match. Try fewer filters.</p>
+      <div class="empty" style="grid-column: 1 / -1">
+        <p class="h3">No pieces match.</p>
+        <p class="muted">Try fewer filters, or see what is in <a href="{% url 'lots:list' %}">the newest lot</a>.</p>
+      </div>
     {% endfor %}
   </div>
   {% include "catalog/partials/pagination.html" %}

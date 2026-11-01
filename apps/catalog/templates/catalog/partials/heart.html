@@ -1,0 +1,17 @@
+{# A save button. Needs `product`; `saved` comes from the storefront context processor. #}
+{% with is_saved=is_saved|default_if_none:False %}
+<form method="post" action="{% url 'catalog:saved_toggle' product.pk %}"
+      hx-post="{% url 'catalog:saved_toggle' product.pk %}" hx-target="this" hx-swap="outerHTML"{% if inline %} hx-vals='{"inline": "1"}'{% endif %}>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  {% if product in saved or is_saved %}
+    <button type="submit" class="heart{% if inline %} heart-inline{% endif %}{% if just_saved %} just-saved{% endif %}" aria-pressed="true" aria-label="Saved: {{ product.title }}. Remove from saved">
+      {% include "partials/icon.html" with name="heart" %}
+    </button>
+  {% else %}
+    <button type="submit" class="heart{% if inline %} heart-inline{% endif %}" aria-pressed="false" aria-label="Save {{ product.title }}">
+      {% include "partials/icon.html" with name="heart" %}
+    </button>
+  {% endif %}
+</form>
+{% endwith %}
