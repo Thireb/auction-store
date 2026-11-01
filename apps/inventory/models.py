@@ -148,3 +148,71 @@ class StockMovement(models.Model):
 
     def __str__(self):
         return f"{self.get_kind_display()} {self.quantity:+d} {self.variant}"
+
+
+class LotPhotoQuerySet(models.QuerySet):
+    def in_tray(self, lot):
+        """Photos of one lot's tray. `lot=None` is the "No lot" tray."""
+        return self.filter(lot=lot) if lot else self.filter(lot__isnull=True)
+
+    def pickable(self):
+        """Photos staff can still put on an item: unassigned, or marked "use again"."""
+        return self.filter(
+            Q(status=LotPhoto.UNASSIGNED) | Q(status=LotPhoto.ASSIGNED, reusable=True)
+        )
+
+
+class LotPhoto(models.Model):
+    """A photo in a lot's tray. Staff upload many at once, then put them on items.
+
+    Putting a photo on an item makes a ProductImage that uses the same file. A photo
+    can go on a second item only after a "use again".
+    """
+
+    UNASSIGNED, ASSIGNED, NOT_USABLE = "unassigned", "assigned", "not_usable"
+    STATUS_CHOICES = [
+        (UNASSIGNED, "Unassigned"),
+        (ASSIGNED, "Assigned"),
+        (NOT_USABLE, "Not usable"),
+    ]
+
+    lot = models.ForeignKey(
+        Lot, null=True, blank=True, related_name="photos", on_delete=models.PROTECT
+    )
+    image = models.ImageField(upload_to="tray/%Y/%m/")
+    thumbnail = models.ImageField(upload_to="tray/thumbs/%Y/%m/", blank=True)
+    original_name = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=UNASSIGNED)
+    reusable = models.BooleanField(
+        default=False, help_text='Set by "Use again": the photo shows in the picker once more.'
+    )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        related_name="+",
+        on_delete=models.SET_NULL,
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        related_name="+",
+        on_delete=models.SET_NULL,
+    )
+    assigned_at = models.DateTimeField(null=True, blank=True)
+    history = HistoricalRecords()
+
+    objects = LotPhotoQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["uploaded_at", "pk"]
+        indexes = [models.Index(fields=["lot", "status"])]
+
+    def __str__(self):
+        return self.original_name or self.image.name
+
+    @property
+    def thumb_url(self):
+        return (self.thumbnail or self.image).url

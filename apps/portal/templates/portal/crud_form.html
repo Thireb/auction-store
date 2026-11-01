@@ -13,6 +13,11 @@
     </div>
   {% else %}<p class="text-gray-500">You can view this, but not change it.</p>{% endif %}
 </form>
+{% if tray_url %}
+  <a href="{{ tray_url }}" class="mt-4 inline-block bg-white border rounded px-4 py-3 hover:border-gray-900" id="lot-tray-link">
+    <b>Photo tray</b>: {{ tray_counts.total }} photo{{ tray_counts.total|pluralize }}, {{ tray_counts.unassigned }} unassigned, {{ tray_counts.assigned }} assigned. Upload or pick photos &rarr;
+  </a>
+{% endif %}
 {% if stock_items %}
   <h2 class="mt-6 font-bold">Stock from this lot</h2>
   <div class="mt-2 bg-white border rounded overflow-x-auto"><table class="w-full">

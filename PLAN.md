@@ -321,3 +321,15 @@ All 10 first questions are answered (section 0). Still open, not blocking:
 
 1. The delivery partner and its fee model. The store keeps fees configurable until then.
 2. The bank / Easypaisa / JazzCash details for advance payments. These go in the admin settings.
+
+### Phase 10: Lot photo trays
+
+Approved by Ahmad on 2026-11-01. Staff add items first and photos later. An item without a photo shows a default image in the store.
+
+1. **Tray per lot.** `LotPhoto` belongs to a lot, or to the "No lot" tray. Staff upload many photos at once: a phone gallery selection or a computer folder. The browser shrinks each photo to at most 2000 px before upload, sends 2 at a time, and retries a failed photo. The server also shrinks the photo and makes a thumbnail.
+2. **Pick photos for an item.** The product form has "Pick from the photo tray". Staff tap photos in order; the first is the main photo. A picked photo leaves the tray. If 2 staff pick the same photo, only the first gets it.
+3. **Back to the tray.** Removing a tray photo from an item returns it to the tray as unassigned.
+4. **Use again.** An assigned photo can go on 1 more item after "Use again".
+5. **Not usable.** Staff move a bad photo to "Not usable". Only the owner deletes it.
+6. **Tracking.** Counts per tray (unassigned, assigned, not usable), who uploaded and who assigned, items with no photo yet, and a dashboard tile for photos unassigned for over 7 days.
+7. **Default image.** `static/store/no-photo.svg` ("Photo coming soon") wherever an item has no photo.

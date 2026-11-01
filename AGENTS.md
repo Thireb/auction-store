@@ -140,6 +140,7 @@ Commit messages: an imperative summary line ("Add price tiers to variants"), the
 | Tell the owner or customer | `apps.orders.notifications` |
 | Public lots: counts, current and next lot | `apps.inventory.lots` |
 | Saved pieces and recently viewed | `apps.catalog.saved` |
+| Lot photo trays (upload, assign, use again, not usable) | `apps.inventory.photos` |
 | Order progress for customers | `apps.orders.timeline.steps()` |
 | Demo data | `manage.py seed_demo` (never on the live store) |
 

@@ -3,7 +3,7 @@
   <a href="{{ product.get_absolute_url }}" class="card-link" tabindex="-1" aria-hidden="true">
     <div class="media"{% if vt %} style="view-transition-name: p{{ product.pk }}"{% endif %}>
       {% with image=product.main_image %}
-        {% if image %}<img src="{{ image.image.url }}" alt="" loading="lazy" decoding="async">{% else %}<span class="no-photo">No photo yet</span>{% endif %}
+        {% if image %}<img src="{{ image.image.url }}" alt="" loading="lazy" decoding="async">{% else %}{% include "partials/no_photo.html" with lazy=True %}{% endif %}
       {% endwith %}
       <span class="pill pill-top">{{ product.condition_short }}</span>
       {% with left=product.pieces_left %}

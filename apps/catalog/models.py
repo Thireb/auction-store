@@ -458,6 +458,14 @@ class ProductImage(models.Model):
     image = models.ImageField(upload_to="products/%Y/%m/")
     alt_text = models.CharField(max_length=200, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
+    source_photo = models.ForeignKey(
+        "inventory.LotPhoto",
+        null=True,
+        blank=True,
+        related_name="uses",
+        on_delete=models.SET_NULL,
+        help_text="The tray photo this image came from. Removing the image returns it.",
+    )
 
     class Meta:
         ordering = ["sort_order", "pk"]

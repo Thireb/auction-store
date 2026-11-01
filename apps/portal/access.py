@@ -63,6 +63,7 @@ MENU = [
             ("Out of stock", "portal:stock_out", "catalog.view_variant"),
             ("Stock movements", "portal:movement_list", "inventory.view_stockmovement"),
             ("Lots", "portal:lot_list", "inventory.view_lot"),
+            ("Photo trays", "portal:tray_list", "inventory.view_lotphoto"),
             ("Import CSV", "portal:import_csv", "inventory.add_stockmovement"),
         ],
     ),

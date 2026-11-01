@@ -125,3 +125,74 @@ def seed_inventory(stdout=None):
         received += 1
     if stdout:
         stdout.write(f"Inventory: {len(lots)} lots, stock for {received} variants, bulk tiers.")
+
+
+# Items that arrive before their photos, and the tray photos waiting for them.
+# lot -> [(title, category, price, condition)]
+TRAY_ITEMS = {
+    "DXB-DEMO-01": [
+        ("Rattan side chair", "Chairs", 12500, "used_like_new"),
+        ("Brass floor lamp", "Lamps", 9800, "used_good"),
+    ],
+    "DXB-DEMO-02": [
+        ("Wireless earbuds, sealed box", "Earbuds", 4200, "new"),
+        ("Steel analog watch", "Analog watches", 15500, "open_box"),
+    ],
+    "SHJ-DEMO-03": [
+        ("Canvas sneakers, EU 41", "Sneakers", 5200, "new"),
+        ("Ceramic vase set of 3", "Vases", 6400, "new"),
+    ],
+}
+
+
+def _photo_file(text, seed, name):
+    from apps.catalog.demo import placeholder_image
+
+    image = placeholder_image(text, seed, name)
+    image.name = name
+    return image
+
+
+def seed_photo_trays(stdout=None):
+    """Items without photos and a tray of photos for each open demo lot. Skips a filled tray."""
+    from apps.catalog.models import Category, Product
+
+    from . import photos
+
+    added = 0
+    for lot_n, (reference, items) in enumerate(TRAY_ITEMS.items()):
+        lot = Lot.objects.filter(reference=reference).first()
+        if lot is None or lot.photos.exists():
+            continue
+        shot = 1
+        for item_n, (title, category_name, price, condition) in enumerate(items):
+            category = Category.objects.filter(name=category_name).first()
+            if category is None:
+                continue
+            product, created = Product.objects.get_or_create(
+                title=title,
+                defaults={
+                    "category": category,
+                    "condition": condition,
+                    "origin_note": f"{lot.title}, demo lot",
+                },
+            )
+            if created:
+                variant = Variant.objects.create(
+                    product=product, sku=f"DEMO-NP-{lot_n}{item_n}", price=price
+                )
+                services.receive(variant, 1, lot=lot, cost_per_unit=round(price * 0.5))
+            for view in ("front", "side"):
+                name = f"IMG_{lot_n + 1}{shot:03d}.jpg"
+                photos.add_photo(
+                    lot, _photo_file(f"{title}, {view}", lot_n * 100 + shot, name), None
+                )
+                shot += 1
+                added += 1
+        blurry = photos.add_photo(
+            lot, _photo_file("Blurry shot", lot_n * 100 + 99, f"IMG_{lot_n + 1}099.jpg"), None
+        )
+        photos.mark_not_usable(blurry, None)
+        added += 1
+    if stdout:
+        stdout.write(f"Photo trays: {added} demo tray photos, items waiting for photos.")

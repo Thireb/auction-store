@@ -1,0 +1,44 @@
+{% extends "portal/base.html" %}
+{% block content %}
+<p><a class="underline text-gray-600" href="{% url 'portal:product_edit' product.pk %}#photos">&larr; {{ product }}</a></p>
+<h1 class="mt-1 text-xl font-bold">Pick photos for {{ product }}</h1>
+<p class="mt-1 text-gray-600">Tap the photos of this item. The first photo you tap is the main photo. Tap again to remove it.</p>
+{% if current %}
+  <p class="mt-2 text-gray-600">This item already has {{ current|length }} photo{{ current|length|pluralize }}. New photos go after them.</p>
+{% endif %}
+
+<nav class="mt-4 flex flex-wrap gap-2" aria-label="Trays">
+  {% for t_lot, t_key, c in trays %}
+    <a href="?tray={{ t_key }}" class="px-3 py-1.5 rounded border {% if t_key == key %}bg-gray-900 text-white border-gray-900{% else %}bg-white{% endif %}"{% if t_key == key %} aria-current="page"{% endif %}>
+      {% if t_lot %}Lot {{ t_lot }}{% else %}No lot{% endif %} ({{ c.unassigned|default:0 }})
+    </a>
+  {% endfor %}
+</nav>
+
+<form method="post" class="mt-4" x-data="{ picked: [] }" id="pick-form">
+  {% csrf_token %}
+  <template x-for="id in picked" :key="id"><input type="hidden" name="photo" :value="id"></template>
+  <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+    {% for photo in choices %}
+      <button type="button" class="relative block rounded overflow-hidden border-4 bg-white"
+              :class="picked.includes({{ photo.pk }}) ? 'border-gray-900' : 'border-transparent'"
+              :aria-pressed="picked.includes({{ photo.pk }})"
+              @click="picked.includes({{ photo.pk }}) ? picked.splice(picked.indexOf({{ photo.pk }}), 1) : picked.push({{ photo.pk }})"
+              aria-label="Photo {{ photo }}">
+        <img src="{{ photo.thumb_url }}" alt="" loading="lazy" class="w-full aspect-square object-cover">
+        <span x-show="picked.includes({{ photo.pk }})" x-cloak class="absolute top-1 left-1 min-w-7 h-7 px-1 rounded-full bg-gray-900 text-white font-bold grid place-items-center" x-text="picked.indexOf({{ photo.pk }}) + 1"></span>
+        {% if photo.status == "assigned" %}<span class="absolute bottom-1 left-1 right-1 rounded bg-white/90 text-[11px] px-1">Also on {{ photo.uses.all.0.product }}</span>{% endif %}
+      </button>
+    {% empty %}
+      <p class="col-span-full text-gray-500">No unassigned photos in this tray. Choose another tray, or upload photos first.</p>
+    {% endfor %}
+  </div>
+  <div class="sticky bottom-0 mt-4 bg-gray-100 py-3 flex flex-wrap items-center gap-3">
+    <button class="px-5 py-2 rounded bg-gray-900 text-white disabled:opacity-40" :disabled="!picked.length">
+      Add <span x-text="picked.length">0</span> photo<span x-show="picked.length !== 1">s</span> to this item
+    </button>
+    <button type="button" class="underline" x-show="picked.length" x-cloak @click="picked = []">Clear</button>
+    {% if lot %}<a class="ml-auto underline" href="{% url 'portal:tray_detail' key %}">Upload more to this tray</a>{% endif %}
+  </div>
+</form>
+{% endblock %}

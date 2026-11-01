@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, render
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
 
@@ -74,7 +75,7 @@ def dig(request, slug):
                 "price": f"{'From ' if len(p.active_variants()) > 1 else ''}Rs {p.min_price:,.0f}",
                 "condition": p.condition_short,
                 "left": "1 piece" if left == 1 else f"{left} left" if left else "",
-                "image": image.image.url if image else "",
+                "image": image.image.url if image else static("store/no-photo.svg"),
                 "url": p.get_absolute_url(),
                 "save_url": reverse("catalog:saved_toggle", args=[p.pk]),
                 "saved": p in saved,
