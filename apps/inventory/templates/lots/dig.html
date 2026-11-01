@@ -28,7 +28,7 @@
               <div class="dig-info"><span class="h3" x-text="next.title"></span><span class="price" x-text="next.price"></span></div>
             </div>
           </template>
-          <a class="dig-card" :href="top.url" :style="topStyle" @click="open($event)"
+          <a class="dig-card" :href="top.url" :style="topStyle" @click="open($event)" draggable="false" @dragstart.prevent
              @pointerdown="down($event)" @pointermove="move($event)" @pointerup="up()" @pointercancel="up()"
              :aria-label="top.title + ', ' + top.price + '. Open the piece.'">
             <div class="media">

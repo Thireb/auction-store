@@ -92,7 +92,8 @@ def test_home_shows_the_lot_and_the_next_one(client):
     assert "DXB-26-07" in content
     assert "Velvet armchair" in content
     assert "Sneaker surplus" in content
-    assert 'x-data="countdown(' in content
+    # Plain digits: the store's thousand separator would split the number in JavaScript.
+    assert 'x-data="countdown(108000)"' in content or 'x-data="countdown(107999)"' in content
     assert reverse("lots:calendar", args=[upcoming.slug]) in content
     assert "Hidden sneakers" not in content
 

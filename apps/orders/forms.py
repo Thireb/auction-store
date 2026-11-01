@@ -21,7 +21,7 @@ class CheckoutForm(forms.Form):
     phone = forms.CharField(
         max_length=20, help_text="We call this number to confirm your order.", label="Mobile number"
     )
-    email = forms.EmailField(required=False, help_text="Optional.")
+    email = forms.EmailField(required=False)
     city = forms.ModelChoiceField(
         queryset=City.objects.filter(is_active=True, cod_allowed=True), empty_label="Choose a city"
     )

@@ -1,5 +1,6 @@
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.catalog.tests.factories import ProductFactory, VariantFactory
 from apps.inventory import services
@@ -19,6 +20,11 @@ def states(order):
 
 def test_new_order_waits_for_the_call():
     order = make_order([(VariantFactory(), 1)])
+    # The time is in Asia/Karachi, not UTC.
+    local = timezone.localtime(order.created_at)
+    assert timeline.steps(order)[0]["detail"] == local.strftime("%-d %B, %-I:%M ") + local.strftime(
+        "%p"
+    )
     assert states(order)[:3] == [
         ("Order placed", "done"),
         ("We call you to confirm", "now"),
