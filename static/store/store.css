@@ -67,7 +67,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Layout ---------------------------------------------------------------------------- */
 .wrap { width: 100%; max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
-.section { padding: 48px 0; }
+.section { padding-block: 48px; }
 .section-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; margin-bottom: 24px; }
 .stack { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
@@ -78,7 +78,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 main { flex: 1; }
 @media (max-width: 640px) {
   .wrap { padding: 0 16px; }
-  .section { padding: 36px 0; }
+  .section { padding-block: 36px; }
   .hide-sm { display: none !important; }
 }
 @media (min-width: 641px) { .only-sm { display: none !important; } }
@@ -148,6 +148,12 @@ main { flex: 1; }
 @media (max-width: 960px) {
   .main-nav { display: none; }
   .search { order: 5; flex-basis: 100%; }
+}
+@media (max-width: 640px) {
+  .site-header .wrap { gap: 8px 4px; padding-block: 8px 10px; }
+  .brand { font-size: 20px; }
+  .header-actions { gap: 0; }
+  .topbar a { display: none; }
 }
 
 /* Slide-in panels (category menu and cart drawer) -------------------------------------- */
@@ -226,11 +232,15 @@ main { flex: 1; }
 .fan-card .fan-title { display: block; padding: 12px 4px 0; font-size: 15px; font-weight: 500; line-height: 1.3; }
 .fan-card .price { display: block; padding: 2px 4px 4px; font-size: 22px; }
 @keyframes fan { from { transform: translate(0, 60px) rotate(0) scale(0.86); opacity: 0; } }
+.fan { overflow-x: clip; overflow-y: visible; }
 @media (max-width: 640px) {
-  .fan { height: 340px; }
-  .fan-card { width: 170px; left: calc(50% - 85px); }
-  .fan-card .media { height: 150px; }
-  .fan-card:nth-child(n + 4) { display: none; }
+  /* Phones: the 3 middle cards, closer together. The outer 2 come first in the markup. */
+  .fan { height: 330px; }
+  .fan-card { width: 160px; left: calc(50% - 80px); top: 20px; transform: translate(calc(var(--x) * 0.75), var(--y)) rotate(var(--r)); }
+  .fan-card:hover { transform: translate(calc(var(--x) * 0.75), calc(var(--y) - 14px)) rotate(var(--r)); }
+  .fan-card .media { height: 140px; }
+  .fan-card .fan-title { font-size: 14px; }
+  .fan-card:nth-child(-n + 2) { display: none; }
 }
 
 /* Dark band (next lot) ---------------------------------------------------------------- */

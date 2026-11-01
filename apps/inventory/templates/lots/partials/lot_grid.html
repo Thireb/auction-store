@@ -1,7 +1,7 @@
 {# Products of a lot with quick filters. Swapped by HTMX when a chip is pressed. #}
 <div id="lot-grid" class="lot-grid">
   <div class="section-head">
-    <h2 class="h2">{% if grid_title %}{{ grid_title }}{% else %}Pieces in lot {{ lot.reference }}{% endif %}</h2>
+    <h2 class="h2">Pieces in lot {{ lot.reference }}</h2>
     <div class="row" role="group" aria-label="Filter pieces" style="gap: 8px">
       {% for key, label, on in chips %}
         <a href="{{ lot.get_absolute_url }}?f={{ key }}" class="chip{% if on %} is-on{% endif %}" {% if on %}aria-current="true"{% endif %}

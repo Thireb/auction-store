@@ -13,7 +13,7 @@
         <p class="lead">{% if lot.story %}{{ lot.story|truncatewords:32 }}{% else %}Most pieces are one of a kind. When a piece sells, it is gone.{% endif %}</p>
         <div class="meter-block">
           <div class="row between small"><strong>{{ lot.items_left }} still here</strong>{% if lot.items_sold %}<span class="muted">{{ lot.items_sold }} sold</span>{% endif %}</div>
-          <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="{{ lot.items_total }}" aria-valuenow="{{ lot.items_left }}" aria-label="Items still here">
+          <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="{{ lot.items_total|stringformat:"d" }}" aria-valuenow="{{ lot.items_left|stringformat:"d" }}" aria-label="Items still here">
             <div class="meter-fill" style="width: {{ lot.left_percent }}%"></div>
           </div>
         </div>
@@ -61,7 +61,7 @@
 
   {% if lot %}
     <section class="wrap section" id="fresh">
-      {% include "lots/partials/lot_grid.html" with grid_title="Fresh from lot "|add:lot.reference %}
+      {% include "lots/partials/lot_grid.html" %}
     </section>
   {% endif %}
 

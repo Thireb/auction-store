@@ -1,6 +1,7 @@
 """The order progress that customers see on the thank-you, tracking and account pages."""
 
 from django.template.defaultfilters import date as format_date
+from django.utils import timezone
 
 from apps.core.templatetags.money import rupees
 
@@ -25,7 +26,7 @@ def steps(order):
     shipment = order.shipments.all()[0] if order.shipments.all() else None
     waiting_for_advance = order.status == Order.AWAITING_ADVANCE
     rows = [
-        ("Order placed", format_date(order.created_at, "j F, g:i A")),
+        ("Order placed", format_date(timezone.localtime(order.created_at), "j F, g:i A")),
         (
             "We check your advance payment" if waiting_for_advance else "We call you to confirm",
             "Keep your phone near you" if order.status == Order.PENDING else "",
