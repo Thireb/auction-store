@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path, reverse_lazy
 
-from .views import catalog, orders, owner
+from .views import catalog, orders, owner, photos
 from .views.simple import CRUDS
 
 app_name = "portal"
@@ -38,6 +38,11 @@ urlpatterns = [
     path("stock/out/", catalog.stock_list, {"level": "out"}, name="stock_out"),
     path("stock/movements/", catalog.movement_list, name="movement_list"),
     path("stock/import/", catalog.import_view, name="import_csv"),
+    path("photos/", photos.tray_list, name="tray_list"),
+    path("photos/<str:key>/", photos.tray_detail, name="tray_detail"),
+    path("photos/<str:key>/upload/", photos.tray_upload, name="tray_upload"),
+    path("photos/item/<int:pk>/<str:action>/", photos.photo_action, name="photo_action"),
+    path("products/<int:pk>/photos/", photos.pick_photos, name="pick_photos"),
     # Owner
     path("settings/", owner.settings_view, name="settings"),
     path("staff/", owner.staff_list, name="staff_list"),

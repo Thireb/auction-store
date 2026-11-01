@@ -26,7 +26,7 @@
             <img x-show="current === {{ forloop.counter0 }}" {% if not forloop.first %}x-cloak{% endif %}
                  src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.title }}"{% if not forloop.first %} loading="lazy"{% endif %}>
           {% empty %}
-            <span class="no-photo">No photo yet</span>
+            {% include "partials/no_photo.html" %}
           {% endfor %}
         </div>
         {% if images|length > 1 %}

@@ -4,7 +4,8 @@ from django.db.models import Count, Sum
 from django.utils import timezone
 
 from apps.accounts.models import WholesaleProfile
-from apps.inventory import levels
+from apps.inventory import levels, photos
+from apps.inventory.models import LotPhoto
 from apps.orders.models import Order, OrderItem
 
 
@@ -42,6 +43,8 @@ def dashboard_numbers(user):
             status=WholesaleProfile.PENDING
         ).count(),
     }
+    if user.has_perm("inventory.view_lotphoto"):
+        numbers["photos_waiting"] = photos.counts(LotPhoto.objects.all())["old"]
     if user.has_perm("inventory.view_cost_and_profit"):
         shipped = OrderItem.objects.filter(
             order__shipped_at__gte=month, cost_total__isnull=False

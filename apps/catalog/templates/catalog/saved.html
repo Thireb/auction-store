@@ -25,7 +25,7 @@
         {% for product in gone %}
           <div class="sold-card">
             <div class="media">
-              {% with image=product.main_image %}{% if image %}<img src="{{ image.image.url }}" alt="" loading="lazy">{% endif %}{% endwith %}
+              {% with image=product.main_image %}{% if image %}<img src="{{ image.image.url }}" alt="" loading="lazy">{% else %}{% include "partials/no_photo.html" with lazy=True %}{% endif %}{% endwith %}
               <span class="stamp" style="--d: {{ forloop.counter0 }}00ms">{% if product.sold_out_at %}SOLD{% else %}GONE{% endif %}</span>
             </div>
             <span style="font-weight: 500">{{ product.title }}</span>

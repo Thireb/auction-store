@@ -1,0 +1,136 @@
+{% extends "portal/base.html" %}
+{% block content %}
+<p><a class="underline text-gray-600" href="{% url 'portal:tray_list' %}">&larr; Photo trays</a>{% if lot %} &middot; <a class="underline text-gray-600" href="{% url 'portal:lot_edit' lot.pk %}">Lot {{ lot }}</a>{% endif %}</p>
+<h1 class="mt-1 text-xl font-bold">{{ title }}</h1>
+<p class="mt-1 text-gray-600">{{ counts.total }} photo{{ counts.total|pluralize }}: {{ counts.unassigned }} unassigned, {{ counts.assigned }} assigned, {{ counts.not_usable }} not usable.{% if counts.old %} <span class="text-amber-700 font-medium">{{ counts.old }} unassigned for over {{ old_days }} days.</span>{% endif %}</p>
+
+{% if can_upload %}
+<section class="mt-4 bg-white border rounded p-4" x-data="trayUpload('{% url 'portal:tray_upload' key %}')" id="tray-upload">
+  <h2 class="font-bold">Upload photos</h2>
+  <p class="text-gray-500">Choose many photos from the phone gallery, or a whole folder on a computer. The phone makes each photo smaller before it sends it.</p>
+  <div class="mt-3 flex flex-wrap gap-2">
+    <label class="px-4 py-2 rounded bg-gray-900 text-white cursor-pointer">Choose photos
+      <input type="file" accept="image/*" multiple class="sr-only" @change="add($event)">
+    </label>
+    <label class="px-4 py-2 rounded border border-gray-900 cursor-pointer">Choose a folder
+      <input type="file" webkitdirectory multiple class="sr-only" @change="add($event)">
+    </label>
+  </div>
+  <div class="mt-3" x-show="total" x-cloak>
+    <p><span x-text="done"></span> of <span x-text="total"></span> uploaded<span x-show="failed.length">, <span class="text-red-700" x-text="failed.length + ' failed'"></span></span>.</p>
+    <div class="mt-1 h-2 bg-gray-200 rounded overflow-hidden"><div class="h-full bg-gray-900 transition-all" :style="'width:' + (100 * done / Math.max(total, 1)) + '%'"></div></div>
+    <div class="mt-2 flex flex-wrap gap-2" x-show="failed.length">
+      <button type="button" class="px-3 py-1 rounded border" @click="retry()">Try the failed photos again</button>
+      <span class="text-red-700" x-text="lastError"></span>
+    </div>
+    <p class="mt-2" x-show="!busy && done"><a class="underline" href="?tab=unassigned">Show the new photos</a></p>
+  </div>
+</section>
+<script>
+document.addEventListener("alpine:init", () => {
+  Alpine.data("trayUpload", (url) => ({
+    queue: [], failed: [], total: 0, done: 0, busy: false, lastError: "",
+    add(event) {
+      const files = [...event.target.files].filter((f) => f.type.startsWith("image/") || /\.(jpe?g|png|webp|heic)$/i.test(f.name));
+      event.target.value = "";
+      this.queue.push(...files);
+      this.total += files.length;
+      if (!this.busy) this.run();
+    },
+    retry() {
+      this.queue.push(...this.failed);
+      this.failed = [];
+      if (!this.busy) this.run();
+    },
+    async shrink(file) {
+      // Resize to at most 2000 px on the phone. If the browser cannot read the file, send it as it is.
+      try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+        const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+        canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+        return blob ? new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" }) : file;
+      } catch (e) {
+        return file;
+      }
+    },
+    async send(file) {
+      const body = new FormData();
+      body.append("photo", await this.shrink(file));
+      const response = await fetch(url, { method: "POST", body, headers: { "X-CSRFToken": "{{ csrf_token }}" }, credentials: "same-origin" });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "The upload failed. Check the internet and try again.");
+      }
+    },
+    async run() {
+      this.busy = true;
+      // 2 uploads at a time: fast enough, and gentle on a slow network.
+      const worker = async () => {
+        while (this.queue.length) {
+          const file = this.queue.shift();
+          try { await this.send(file); this.done++; }
+          catch (e) { this.failed.push(file); this.lastError = file.name + ": " + e.message; }
+        }
+      };
+      await Promise.all([worker(), worker()]);
+      this.busy = false;
+      // All went well: show the new photos. After a failure, stay so staff can try again.
+      if (!this.failed.length) window.location.href = "?tab=unassigned";
+    },
+  }));
+});
+</script>
+{% endif %}
+
+<nav class="mt-5 flex gap-2" aria-label="Photo tabs">
+  {% for value, label in tabs %}
+    <a href="?tab={{ value }}" class="px-3 py-1.5 rounded border {% if tab == value %}bg-gray-900 text-white border-gray-900{% else %}bg-white{% endif %}"{% if tab == value %} aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+
+<div class="mt-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3" id="tray-photos">
+  {% for photo in page_obj %}
+    <figure class="bg-white border rounded p-2 space-y-1 m-0">
+      <a href="{{ photo.image.url }}" target="_blank"><img src="{{ photo.thumb_url }}" alt="{{ photo }}" loading="lazy" class="w-full aspect-square object-cover rounded"></a>
+      <figcaption class="text-xs text-gray-600 break-all">{{ photo }}</figcaption>
+      <p class="text-xs text-gray-500">Uploaded by {{ photo.uploaded_by|default:"someone" }}, {{ photo.uploaded_at|date:"j M" }}</p>
+      {% if photo.status == "assigned" %}
+        <p class="text-xs">On: {% for use in photo.uses.all %}<a class="underline" href="{% url 'portal:product_edit' use.product_id %}">{{ use.product }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+        {% if photo.reusable %}<p class="text-xs text-green-700">Can be used again</p>{% endif %}
+      {% endif %}
+      {% if can_change %}
+        <form method="post" class="flex flex-wrap gap-2 text-xs">
+          {% csrf_token %}<input type="hidden" name="tab" value="{{ tab }}">
+          {% if photo.status == "unassigned" %}<button class="underline" formaction="{% url 'portal:photo_action' photo.pk 'not_usable' %}">Not usable</button>{% endif %}
+          {% if photo.status == "assigned" and not photo.reusable %}<button class="underline" formaction="{% url 'portal:photo_action' photo.pk 'use_again' %}">Use again</button>{% endif %}
+          {% if photo.status == "not_usable" %}<button class="underline" formaction="{% url 'portal:photo_action' photo.pk 'restore' %}">Back to unassigned</button>
+            {% if user.is_superuser %}<button class="underline text-red-700" formaction="{% url 'portal:photo_action' photo.pk 'delete' %}" onclick="return confirm('Delete this photo for good?')">Delete</button>{% endif %}
+          {% endif %}
+        </form>
+      {% endif %}
+    </figure>
+  {% empty %}
+    <p class="col-span-full text-gray-500">No photos here.</p>
+  {% endfor %}
+</div>
+{% if page_obj.has_other_pages %}
+  <p class="mt-3 flex gap-3">
+    {% if page_obj.has_previous %}<a class="underline" href="?tab={{ tab }}&amp;page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+    <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="underline" href="?tab={{ tab }}&amp;page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+  </p>
+{% endif %}
+
+{% if missing %}
+  <h2 class="mt-6 font-bold">Items in this tray's lot with no photo yet</h2>
+  <ul class="mt-2 bg-white border rounded divide-y" id="items-without-photos">
+    {% for product in missing %}
+      <li class="px-3 py-2 flex flex-wrap gap-2 justify-between"><span>{{ product }}</span><a class="underline" href="{% url 'portal:pick_photos' product.pk %}?tray={{ key }}">Pick photos</a></li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

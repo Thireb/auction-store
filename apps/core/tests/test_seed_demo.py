@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 
 from apps.catalog.models import Category, Product
+from apps.inventory.demo import TRAY_ITEMS
+from apps.inventory.models import LotPhoto
 
 
 @pytest.mark.django_db
@@ -14,7 +16,13 @@ def test_seed_demo_runs_twice_without_duplicates(settings, tmp_path):
     assert products > 10
     assert Product.objects.count() == products
     assert Category.objects.count() == categories
-    assert all(p.variants.exists() and p.images.exists() for p in Product.objects.all())
+    assert all(p.variants.exists() for p in Product.objects.all())
+    # Every product has photos, except the items that wait for photos from their lot tray.
+    waiting = {title for items in TRAY_ITEMS.values() for title, *_ in items}
+    without = set(Product.objects.filter(images__isnull=True).values_list("title", flat=True))
+    assert without == waiting
+    assert LotPhoto.objects.filter(status=LotPhoto.UNASSIGNED).count() == 2 * len(waiting)
+    assert LotPhoto.objects.filter(status=LotPhoto.NOT_USABLE).count() == len(TRAY_ITEMS)
 
 
 @pytest.mark.django_db

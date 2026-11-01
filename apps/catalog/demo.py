@@ -402,5 +402,11 @@ def seed_catalog(stdout=None):
         _create_product(row, sku_prefix, index, categories, brands, attributes)
         created += 1
 
+    # Demo products made before condition notes existed get them now.
+    for condition, notes in CONDITION_NOTES.items():
+        Product.objects.filter(
+            condition=condition, condition_notes="", variants__sku__startswith="DEMO-"
+        ).update(condition_notes=notes)
+
     if stdout:
         stdout.write(f"Catalog: {len(categories)} categories, {created} new products.")

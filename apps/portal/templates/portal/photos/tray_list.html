@@ -1,0 +1,22 @@
+{% extends "portal/base.html" %}
+{% block content %}
+<h1 class="text-xl font-bold">Photo trays</h1>
+<p class="mt-1 text-gray-600 max-w-2xl">Each lot has a tray. Upload all the photos of a lot at once, then open each item and pick its photos from the tray. A photo on an item leaves the tray.</p>
+{% if old %}<p class="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2" id="old-photos">&#9888; {{ old }} photo{{ old|pluralize:" is,s are" }} unassigned for over {{ old_days }} days.</p>{% endif %}
+<div class="mt-4 bg-white border rounded overflow-x-auto">
+  <table class="w-full">
+    <thead class="text-left text-gray-500 bg-gray-50"><tr><th class="px-3 py-2">Tray</th><th class="px-3">Photos</th><th class="px-3">Unassigned</th><th class="px-3">Assigned</th><th class="px-3">Not usable</th></tr></thead>
+    <tbody>
+      {% for lot, key, c in rows %}
+        <tr class="border-t">
+          <td class="px-3 py-2"><a class="underline font-medium" href="{% url 'portal:tray_detail' key %}">{% if lot %}Lot {{ lot }}{% if lot.source %} <span class="text-gray-500 font-normal">({{ lot.source }})</span>{% endif %}{% else %}No lot{% endif %}</a></td>
+          <td class="px-3">{{ c.total|default:0 }}</td>
+          <td class="px-3{% if c.unassigned %} font-semibold{% endif %}">{{ c.unassigned|default:0 }}</td>
+          <td class="px-3">{{ c.assigned|default:0 }}</td>
+          <td class="px-3">{{ c.not_usable|default:0 }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

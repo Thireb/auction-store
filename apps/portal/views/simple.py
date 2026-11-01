@@ -1,9 +1,11 @@
 from django import forms
 from django.db.models import Count, Sum
+from django.urls import reverse
 
 from apps.catalog.models import Attribute, Brand, Category
 from apps.core.models import Page
 from apps.core.phone import normalize_pk_mobile
+from apps.inventory import photos
 from apps.inventory.models import Lot
 from apps.orders.models import BlockedPhone
 from apps.shipping.models import City
@@ -137,10 +139,14 @@ class LotCrud(Crud):
         return form
 
     def edit_context(self, request, obj):
-        return {
+        context = {
             "stock_items": obj.stock_items.select_related("variant__product"),
             "show_cost": request.user.has_perm(COST_PERM),
         }
+        if request.user.has_perm("inventory.view_lotphoto"):
+            context["tray_url"] = reverse("portal:tray_detail", args=[obj.pk])
+            context["tray_counts"] = photos.counts(obj.photos.all())
+        return context
 
 
 class CityCrud(Crud):

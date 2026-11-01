@@ -23,6 +23,7 @@
 <div class="mt-2 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
   <a class="bg-white border rounded p-3 hover:border-gray-900" href="{% url 'portal:stock_near_empty' %}">Near empty<b class="block text-2xl">{{ n.low_stock }}</b></a>
   <a class="bg-white border rounded p-3 hover:border-gray-900" href="{% url 'portal:stock_out' %}">Out of stock (hidden from customers)<b class="block text-2xl">{{ n.out_of_stock }}</b></a>
+  {% if n.photos_waiting is not None %}<a class="bg-white border rounded p-3 hover:border-gray-900{% if n.photos_waiting %} border-amber-400 bg-amber-50{% endif %}" href="{% url 'portal:tray_list' %}" id="photos-waiting">Photos unassigned for over 7 days<b class="block text-2xl">{{ n.photos_waiting }}</b></a>{% endif %}
   {% if perms.catalog.add_product %}<a class="bg-white border rounded p-3 hover:border-gray-900" href="{% url 'portal:product_add' %}">Add a product<b class="block text-2xl">+</b></a>{% endif %}
 </div>
 {% endif %}

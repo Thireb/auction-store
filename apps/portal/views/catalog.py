@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.catalog.importer import import_csv, template_csv
 from apps.catalog.models import Category, PriceTier, Product, ProductImage, Variant
-from apps.inventory import levels
+from apps.inventory import levels, photos
 from apps.inventory import services as stock
 from apps.inventory.models import Lot, StockMovement
 
@@ -84,7 +84,8 @@ def _save_images(request, product, upload_form, image_formset):
                 continue
             if image_formset.can_delete and form.cleaned_data.get("DELETE"):
                 if user.has_perm("catalog.delete_productimage"):
-                    form.instance.delete()
+                    # A tray photo goes back to its tray as unassigned.
+                    photos.remove_image(form.instance, user)
             elif form.has_changed() and user.has_perm("catalog.change_productimage"):
                 form.save()
     if user.has_perm("catalog.add_productimage"):
@@ -153,6 +154,8 @@ def product_edit(request, pk=None):
         "can_save": can_save,
         "can_stock": user.has_perm("inventory.add_stockmovement"),
         "can_upload": user.has_perm("catalog.add_productimage"),
+        "can_pick": product is not None
+        and user.has_perms(["catalog.add_productimage", "inventory.view_lotphoto"]),
         "can_delete_images": user.has_perm("catalog.delete_productimage"),
         "can_delete": product is not None and user.is_superuser,
         "history": object_history(product) if product else [],
