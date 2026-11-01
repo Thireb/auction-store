@@ -1,0 +1,8 @@
+{% load money %}
+{% if fees %}
+  Delivery to {{ city.name }}: {% if fees.delivery_fee %}{{ fees.delivery_fee|rupees }}{% else %}free{% endif %}.
+  {% if fees.cod_fee %}Cash on delivery fee: {{ fees.cod_fee|rupees }}.{% else %}No extra fee for cash on delivery.{% endif %}
+  {% if city.estimated_days %}Arrives in {{ city.estimated_days }} days.{% endif %}
+{% else %}
+  Choose your city to see the delivery fee and days.
+{% endif %}

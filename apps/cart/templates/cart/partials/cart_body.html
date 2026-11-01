@@ -1,47 +1,57 @@
 {% load money %}
 <div id="cart-body">
   {% if cart.lines %}
-    <table class="w-full text-sm bg-white border rounded">
-      <thead class="bg-gray-100"><tr><th class="text-left p-2">Item</th><th class="p-2">Price each</th><th class="p-2">Quantity</th><th class="p-2 text-right">Total</th><th></th></tr></thead>
-      <tbody>
+    <div class="checkout" style="padding-top: 0">
+      <div class="panel stack" style="gap: 20px">
         {% for line in cart.lines %}
-          <tr class="border-t align-top">
-            <td class="p-2">
-              <a class="font-medium" href="{{ line.product.get_absolute_url }}">{{ line.product.title }}</a>
-              {% if line.variant.name %}<div class="text-gray-500">{{ line.variant.name }}</div>{% endif %}
-              {% if line.error %}<div class="text-red-600">{{ line.error }}</div>{% endif %}
-            </td>
-            <td class="p-2 text-center">{{ line.unit_price|rupees }}{% if line.saving %}<div class="text-green-700 text-xs">Bulk price</div>{% endif %}</td>
-            <td class="p-2 text-center">
-              <form hx-post="{% url 'cart:update' line.variant.pk %}" hx-target="#cart-body" hx-swap="outerHTML" hx-trigger="change">
-                {% csrf_token %}
-                <input type="number" name="quantity" value="{{ line.quantity }}" min="0"
-                       step="{{ line.variant.order_step }}" class="w-20 border rounded px-2 py-1" aria-label="Quantity">
-                <noscript><button type="submit">Update</button></noscript>
-              </form>
-            </td>
-            <td class="p-2 text-right">{{ line.line_total|rupees }}</td>
-            <td class="p-2 text-right">
-              <form hx-post="{% url 'cart:remove' line.variant.pk %}" hx-target="#cart-body" hx-swap="outerHTML" method="post" action="{% url 'cart:remove' line.variant.pk %}">
-                {% csrf_token %}<button type="submit" class="text-red-600">Remove</button>
-              </form>
-            </td>
-          </tr>
+          <div class="line" style="grid-template-columns: 96px minmax(0, 1fr) auto">
+            {% include "cart/partials/line_media.html" %}
+            <div class="stack" style="gap: 6px">
+              <a class="line-title" href="{{ line.product.get_absolute_url }}">{{ line.product.title }}</a>
+              {% if line.variant.name %}<span class="muted small">{{ line.variant.name }}</span>{% endif %}
+              <span class="small">{{ line.unit_price|rupees }} each{% if line.saving %} <span style="color: var(--ok)">(bulk price)</span>{% endif %}</span>
+              {% if line.error %}<span class="error">{{ line.error }}</span>{% endif %}
+              <div class="row" style="gap: 16px">
+                <form hx-post="{% url 'cart:update' line.variant.pk %}" hx-target="#cart-body" hx-swap="outerHTML" hx-trigger="change" method="post" action="{% url 'cart:update' line.variant.pk %}">
+                  {% csrf_token %}
+                  <label class="sr-only" for="qty-{{ line.variant.pk }}">Quantity of {{ line.product.title }}</label>
+                  <input id="qty-{{ line.variant.pk }}" type="number" name="quantity" value="{{ line.quantity }}" min="0"
+                         step="{{ line.variant.order_step }}" class="input" style="width: 96px; min-height: 44px; padding: 8px 12px">
+                  <noscript><button type="submit" class="btn btn-sm btn-line">Update</button></noscript>
+                </form>
+                <form hx-post="{% url 'cart:remove' line.variant.pk %}" hx-target="#cart-body" hx-swap="outerHTML" method="post" action="{% url 'cart:remove' line.variant.pk %}">
+                  {% csrf_token %}<button type="submit" class="link-btn">Remove</button>
+                </form>
+              </div>
+            </div>
+            <span class="price" style="font-size: 22px">{{ line.line_total|rupees }}</span>
+          </div>
         {% endfor %}
-      </tbody>
-    </table>
-    <div class="mt-4 text-right">
-      {% if cart.savings %}<p class="text-green-700 text-sm">You save {{ cart.savings|rupees }} with bulk prices.</p>{% endif %}
-      <p class="text-lg font-semibold">Subtotal: {{ cart.subtotal|rupees }}</p>
-      <p class="text-sm text-gray-500">Delivery and COD fees are shown at checkout.</p>
-      {% if cart.has_errors %}
-        <p class="mt-2 text-red-600 text-sm">Fix the items marked in red before checkout.</p>
-      {% else %}
-        <a href="{% url 'orders:checkout' %}" class="inline-block mt-3 px-4 py-2 rounded bg-black text-white">Checkout</a>
-      {% endif %}
+      </div>
+      <aside class="stack">
+        <div class="panel stack">
+          <dl class="totals">
+            <div><dt>Subtotal</dt><dd style="margin: 0"><strong>{{ cart.subtotal|rupees }}</strong></dd></div>
+          </dl>
+          {% if cart.savings %}<p class="small" style="margin: 0; color: var(--ok)">You save {{ cart.savings|rupees }} with bulk prices.</p>{% endif %}
+          {% include "cart/partials/free_delivery.html" %}
+          <p class="help">Delivery and cash on delivery fees show at checkout.</p>
+          {% if cart.has_errors %}
+            <p class="error">Fix the items marked in red before checkout.</p>
+          {% else %}
+            <a href="{% url 'orders:checkout' %}" class="btn btn-ink btn-lg btn-block">Go to checkout</a>
+          {% endif %}
+          <a href="{% url 'lots:list' %}" class="btn btn-line btn-block">Keep browsing</a>
+        </div>
+      </aside>
     </div>
   {% else %}
-    <p class="text-gray-500">Your cart is empty. <a class="underline" href="{% url 'catalog:product_list' %}">Shop now</a></p>
+    <div class="empty">
+      <p class="h3">Your cart is empty.</p>
+      <p class="muted">Find something in the newest lot.</p>
+      <a class="btn btn-ink" href="{% url 'lots:list' %}">See the lots</a>
+      <p class="small"><a href="{% url 'catalog:product_list' %}">Or shop every piece</a></p>
+    </div>
   {% endif %}
   {% include "cart/partials/cart_count.html" %}
 </div>

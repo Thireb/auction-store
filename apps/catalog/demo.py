@@ -321,6 +321,14 @@ def _categories():
     return tree
 
 
+CONDITION_NOTES = {
+    "open_box": "The box was opened. The item was not used.\nAll parts are in the box.",
+    "used_like_new": "Light signs of use. No marks we could find.\nCleaned and checked.",
+    "used_good": "Small marks from normal use. See the photos.\nWorks as it should.",
+    "as_is": "Damaged. See every photo before you buy.\nSold as it is, for parts or repair.",
+}
+
+
 def _create_product(row, sku_prefix, index, categories, brands, attributes):
     title, cat, brand, condition, price, variants, attrs = row
     product = Product.objects.create(
@@ -328,6 +336,7 @@ def _create_product(row, sku_prefix, index, categories, brands, attributes):
         category=categories[cat],
         brand=brands.get(brand),
         condition=condition,
+        condition_notes=CONDITION_NOTES.get(condition, ""),
         description=(
             f"{title}. Imported from a Dubai auction lot or export leftover stock. "
             "Checked and photographed by our team before listing."

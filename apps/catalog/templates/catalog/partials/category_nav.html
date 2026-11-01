@@ -1,15 +1,18 @@
 {% load category_nav %}
-<nav id="category-nav" aria-label="Categories" class="text-sm" x-data="{ q: '' }">
-  <div class="flex items-center justify-between lg:hidden mb-3">
-    <p class="font-bold text-base">Categories</p>
-    <button type="button" @click="$dispatch('nav-close')" aria-label="Close categories" class="text-xl px-2">&times;</button>
+<nav id="category-nav" class="cat-nav stack" aria-label="Categories" x-data="{ q: '' }">
+  <div class="row between">
+    <p class="h3" style="margin: 0">Browse</p>
+    <button type="button" class="icon-btn" @click="$dispatch('nav-close'); nav = false" aria-label="Close categories">{% include "partials/icon.html" with name="close" %}</button>
   </div>
-  <input type="search" name="q" x-model="q" placeholder="Find a category" aria-label="Find a category"
-         class="w-full border rounded px-2 py-1 bg-white"
+  <label for="category-find" class="sr-only">Find a category</label>
+  <input id="category-find" type="search" name="q" x-model="q" placeholder="Find a category"
          hx-get="{% url 'catalog:nav_search' %}" hx-trigger="input changed delay:300ms, search" hx-target="#category-search-results">
-  <div id="category-search-results" x-show="q" x-cloak class="mt-2"></div>
-  <div x-show="!q" class="mt-2">
-    <a href="{% url 'catalog:product_list' %}" @click="$dispatch('nav-close')" class="block px-2 py-1 rounded font-medium {% if request.resolver_match.url_name == 'product_list' %}bg-gray-900 text-white{% else %}hover:bg-gray-100{% endif %}">All products</a>
+  <div id="category-search-results" x-show="q" x-cloak></div>
+  <div x-show="!q">
+    <ul class="cat-tree">
+      <li><a href="{% url 'lots:list' %}" class="cat-link">Lots</a></li>
+      <li><a href="{% url 'catalog:product_list' %}" class="cat-link {% if request.resolver_match.url_name == 'product_list' %}is-current{% endif %}">All products</a></li>
+    </ul>
     {% include "catalog/partials/category_tree.html" %}
   </div>
 </nav>

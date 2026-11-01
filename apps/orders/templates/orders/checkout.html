@@ -3,34 +3,50 @@
 {% block title %}Checkout | {{ STORE_NAME }}{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-bold mb-4">Checkout</h1>
-  <div class="grid md:grid-cols-3 gap-6">
-    <form method="post" class="md:col-span-2 space-y-4 bg-white border rounded p-4" x-data="{ account: {{ form.create_account.value|yesno:'true,false' }} }" novalidate>
-      {% csrf_token %}
-      {% if form.non_field_errors %}<div class="rounded border border-red-300 bg-red-50 p-3 text-sm">{{ form.non_field_errors }}</div>{% endif %}
-      {% for field in form %}
-        {% if field.name == "create_account" %}
-          <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="create_account" x-model="account" {% if field.value %}checked{% endif %}> {{ field.label }}</label>
-          {% if field.errors %}<p class="text-red-600 text-sm">{{ field.errors|join:" " }}</p>{% endif %}
-        {% elif field.name == "password" %}
-          <div x-show="account" x-cloak>
-            <label class="block text-sm font-medium" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.help_text %}<p class="text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-            {% if field.errors %}<p class="text-red-600 text-sm">{{ field.errors|join:" " }}</p>{% endif %}
-          </div>
-        {% else %}
-          <div>
-            <label class="block text-sm font-medium" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.help_text %}<p class="text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-            {% if field.errors %}<p class="text-red-600 text-sm">{{ field.errors|join:" " }}</p>{% endif %}
-          </div>
+  <div class="wrap">
+    <h1 class="h2" style="padding-top: 32px">Checkout</h1>
+    <div class="checkout">
+      <form method="post" class="stack" style="gap: 18px" novalidate
+            x-data="{ account: {% if form.create_account.value %}true{% else %}false{% endif %}, busy: false }" @submit="busy = true">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="form-error" role="alert">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+
+        <section class="panel stack">
+          <h2 class="h3">Who gets the parcel</h2>
+          {% include "partials/form_field.html" with field=form.phone %}
+          {% include "partials/form_field.html" with field=form.full_name %}
+          {% include "partials/form_field.html" with field=form.email %}
+        </section>
+
+        <section class="panel stack">
+          <h2 class="h3">Where to deliver</h2>
+          {% include "partials/form_field.html" with field=form.city %}
+          {% include "partials/form_field.html" with field=form.address %}
+          {% include "partials/form_field.html" with field=form.landmark %}
+          {% include "partials/form_field.html" with field=form.notes %}
+        </section>
+
+        {% if form.create_account %}
+          <section class="panel stack">
+            <label class="check-panel">
+              <input type="checkbox" name="create_account" x-model="account" {% if form.create_account.value %}checked{% endif %}>
+              <span class="stack" style="gap: 2px"><strong>Create an account</strong><span class="muted small">Track your orders and keep your saved pieces on any phone.</span></span>
+            </label>
+            {% for error in form.create_account.errors %}<p class="error">{{ error }}</p>{% endfor %}
+            <div x-show="account" x-cloak class="reveal">{% include "partials/form_field.html" with field=form.password %}</div>
+          </section>
         {% endif %}
-      {% endfor %}
-      <p class="text-sm text-gray-600">Payment: Cash on Delivery. We call you to confirm the order before dispatch.</p>
-      <button type="submit" class="px-4 py-2 rounded bg-black text-white">Place order</button>
-    </form>
-    <div>{% include "orders/partials/order_summary.html" %}</div>
+
+        <div class="pay-box">
+          <span class="h3">Pay cash on delivery</span>
+          <span class="muted">We call you to confirm before we pack anything. No card needed.</span>
+        </div>
+        <button type="submit" class="btn btn-blue btn-lg btn-block" :class="busy && 'is-busy'">
+          <span class="spin" x-show="busy" x-cloak aria-hidden="true"></span>
+          <span x-text="busy ? 'Placing your order' : 'Place order, pay on delivery'">Place order, pay on delivery</span>
+        </button>
+      </form>
+      <aside>{% include "orders/partials/order_summary.html" %}</aside>
+    </div>
   </div>
 {% endblock %}

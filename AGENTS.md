@@ -15,7 +15,7 @@ This file tells AI coding agents (Claude, Codex, Copilot and others) how to work
 | Part | Choice |
 |---|---|
 | Backend | Python 3.12, Django 5.2 LTS |
-| Frontend | Django templates, HTMX 2, Alpine.js 3, Tailwind (CDN browser build for the test UI) |
+| Frontend | Django templates, HTMX 2, Alpine.js 3. Storefront: `static/store/store.css` and `store.js`, no build step. Staff portal: Tailwind CDN browser build |
 | Database | PostgreSQL 16 |
 | Static files | WhiteNoise |
 | App server | Gunicorn |
@@ -108,7 +108,10 @@ Commit messages: an imperative summary line ("Add price tiers to variants"), the
 
 ### Templates, HTMX and Alpine
 
-- The current UI is a **throwaway test UI**. Keep templates simple and logic-free. Do not spend time on design.
+- The storefront has a real design: the "lot tag" direction (PLAN.md, phase 9). Use the classes and tokens in `static/store/store.css` and the partials in `templates/partials/` (icon, form field) and `catalog/partials/` (product card, heart). Do not add Tailwind or a CSS framework to the storefront.
+- Keep templates logic-free. Counts and lists come from services such as `apps.inventory.lots`.
+- Motion: one CSS animation per moment, and motion that answers a customer action. Every animation must stop under `prefers-reduced-motion`.
+- The staff portal (`apps/portal`) is still a plain Tailwind UI. Function over design there.
 - Use HTMX for server calls (add to cart, filters, form updates). Return a partial template for HTMX requests (`request.htmx` from `django-htmx`).
 - Use Alpine only for small client-side state (menus, galleries, show/hide).
 - Pin every CDN script to an exact version.
@@ -135,6 +138,9 @@ Commit messages: an imperative summary line ("Add price tiers to variants"), the
 | Create an order | `apps.orders.services.place_order()` |
 | Change an order status | `apps.orders.workflow.transition()` |
 | Tell the owner or customer | `apps.orders.notifications` |
+| Public lots: counts, current and next lot | `apps.inventory.lots` |
+| Saved pieces and recently viewed | `apps.catalog.saved` |
+| Order progress for customers | `apps.orders.timeline.steps()` |
 | Demo data | `manage.py seed_demo` (never on the live store) |
 
 ## 10. Things to avoid

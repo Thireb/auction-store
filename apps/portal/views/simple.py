@@ -97,10 +97,18 @@ class LotCrud(Crud):
         ("Purchase date", "purchase_date"),
         ("Pieces received", lambda lot: lot.n_received or 0),
         ("Pieces on hand", lambda lot: lot.n_on_hand or 0),
+        ("In the store", "is_public"),
+        ("Opens", "opens_at"),
     ]
-    search_fields = ["reference", "source", "notes"]
+    search_fields = ["reference", "source", "notes", "public_title"]
+    filters = ["is_public"]
     owner_delete = True
-    help_text = "A lot is one purchase from an auction or an exporter. Stock is received into lots."
+    help_text = (
+        "A lot is one purchase from an auction or an exporter. Stock is received into lots. "
+        'Tick "Show in the store" to give a lot its own page. Its pieces stay hidden until '
+        "the opening time, and the home page shows a countdown."
+    )
+    public_fields = ["is_public", "public_title", "story", "cover_image", "opens_at"]
 
     def get_queryset(self, request):
         return Lot.objects.annotate(
@@ -110,9 +118,9 @@ class LotCrud(Crud):
 
     def get_fields(self, request, obj=None):
         fields = ["reference", "source", "purchase_date", "total_cost", "landed_cost", "notes"]
-        if request.user.has_perm(COST_PERM):
-            return fields
-        return [f for f in fields if f not in ("total_cost", "landed_cost")]
+        if not request.user.has_perm(COST_PERM):
+            fields = [f for f in fields if f not in ("total_cost", "landed_cost")]
+        return fields + self.public_fields
 
     def get_form_class(self, request, obj=None):
         form = super().get_form_class(request, obj)
@@ -120,6 +128,12 @@ class LotCrud(Crud):
             form.base_fields["purchase_date"].widget = forms.DateInput(
                 attrs={"type": "date", "class": "w-full border rounded px-2 py-1 bg-white"}
             )
+        form.base_fields["opens_at"].widget = forms.DateTimeInput(
+            format="%Y-%m-%dT%H:%M",
+            attrs={"type": "datetime-local", "class": "w-full border rounded px-2 py-1 bg-white"},
+        )
+        form.base_fields["opens_at"].input_formats = ["%Y-%m-%dT%H:%M"]
+        form.base_fields["story"].widget.attrs["rows"] = 5
         return form
 
     def edit_context(self, request, obj):

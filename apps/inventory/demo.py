@@ -4,6 +4,8 @@ import datetime
 import random
 from decimal import Decimal
 
+from django.utils import timezone
+
 from apps.catalog.demo_extra import EXTRA_BULK
 from apps.catalog.models import PriceTier, Variant
 
@@ -21,6 +23,44 @@ LOTS = [
     ("SHJ-DEMO-03", "Export leftovers, Sharjah", datetime.date(2026, 10, 6), 1_800_000, 290_000),
     ("KHI-DEMO-04", "Export surplus, Karachi", datetime.date(2026, 10, 20), 950_000, 60_000),
 ]
+
+
+# Public face of each lot: title, story, days until it opens (None: open now).
+LOT_STORIES = {
+    "DXB-DEMO-01": (
+        "Dubai hotel refit auction",
+        "A 5-star hotel in Dubai Marina replaced its rooms and lobby. We bought sofas, "
+        "tables and lamps at the auction. Each piece is checked and photographed here.",
+        None,
+    ),
+    "DXB-DEMO-02": (
+        "Emirates electronics auction",
+        "Boxes of chargers, cables and watches from an electronics importer in Dubai. "
+        "Most are new or open box.",
+        None,
+    ),
+    "SHJ-DEMO-03": (
+        "Sharjah export leftovers",
+        "Shoes and decor that a Sharjah exporter could not ship. New, in mixed sizes.",
+        None,
+    ),
+    "KHI-DEMO-04": (
+        "Karachi export surplus",
+        "The next shipment. You see the pieces the moment it opens.",
+        3,
+    ),
+}
+
+
+def _make_public(lot):
+    title, story, days = LOT_STORIES.get(lot.reference, ("", "", None))
+    if lot.is_public or not title:
+        return
+    lot.is_public, lot.public_title, lot.story = True, title, story
+    if days is not None:
+        opens = timezone.localtime() + datetime.timedelta(days=days)
+        lot.opens_at = opens.replace(hour=20, minute=0, second=0, microsecond=0)
+    lot.save()
 
 
 def _add_tiers(variant):
@@ -51,6 +91,8 @@ def seed_inventory(stdout=None):
         )[0]
         for ref, source, date, total, landed in LOTS
     ]
+    for lot in lots:
+        _make_public(lot)
     rng = random.Random(7)
     received = 0
     # Only variants with no stock yet, so the seed can run again after new products.

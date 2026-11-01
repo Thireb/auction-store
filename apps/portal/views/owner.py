@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.db.models import Q
 from django.forms import modelform_factory
 from django.shortcuts import get_object_or_404, redirect, render
@@ -43,12 +44,20 @@ def dashboard(request):
     return render(request, "portal/dashboard.html", context)
 
 
+def _formfield(field, **kwargs):
+    """A link typed without "https://" gets it (the Django 6 default)."""
+    if isinstance(field, models.URLField):
+        kwargs["assume_scheme"] = "https"
+    return field.formfield(**kwargs)
+
+
 @portal_view("shipping.change_shippingsettings")
 def settings_view(request):
     obj = ShippingSettings.load()
     form_class = modelform_factory(
         ShippingSettings,
         form=type("SettingsForm", (StyledFormMixin, forms.ModelForm), {}),
+        formfield_callback=_formfield,
         fields=[
             "default_delivery_fee",
             "default_cod_fee",
@@ -57,6 +66,7 @@ def settings_view(request):
             "advance_above_total",
             "advance_percent_above_total",
             "advance_payment_details",
+            "whatsapp_channel_url",
             "low_stock_default",
         ],
     )

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Saved pieces | {{ STORE_NAME }}{% endblock %}
+
+{% block content %}
+  <div class="wrap section">
+    <h1 class="h1" style="font-size: clamp(40px, 5vw, 64px)">Saved pieces</h1>
+    <p class="lead" style="margin-top: 12px">Saving does not hold a piece. Someone else can still buy it, so do not wait too long.
+      {% if not user.is_authenticated %}<a href="{% url 'accounts:login' %}?next={% url 'catalog:saved' %}">Log in</a> to keep your saved pieces on every phone.{% endif %}</p>
+  </div>
+  <div class="wrap">
+    {% if available %}
+      <div class="grid-products">{% for product in available %}{% include "catalog/partials/product_card.html" %}{% endfor %}</div>
+    {% elif not gone %}
+      <div class="empty">
+        <p class="h3">You have not saved anything yet.</p>
+        <p class="muted">Press the heart on a piece, or swipe right in Dig mode.</p>
+        <a href="{% url 'lots:list' %}" class="btn btn-ink">See the lots</a>
+      </div>
+    {% endif %}
+  </div>
+  {% if gone %}
+    <section class="wrap section">
+      <div class="section-head"><h2 class="h2">Gone since you saved them</h2></div>
+      <div class="grid-sold">
+        {% for product in gone %}
+          <div class="sold-card">
+            <div class="media">
+              {% with image=product.main_image %}{% if image %}<img src="{{ image.image.url }}" alt="" loading="lazy">{% endif %}{% endwith %}
+              <span class="stamp" style="--d: {{ forloop.counter0 }}00ms">{% if product.sold_out_at %}SOLD{% else %}GONE{% endif %}</span>
+            </div>
+            <span style="font-weight: 500">{{ product.title }}</span>
+            {% include "catalog/partials/heart.html" with inline=True %}
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

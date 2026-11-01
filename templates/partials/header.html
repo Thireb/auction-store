@@ -1,20 +1,39 @@
-<header class="bg-white border-b">
-  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-    <button type="button" class="lg:hidden px-2 py-1 border rounded text-sm" @click="$dispatch('nav-open')" aria-controls="sidebar" aria-label="Open categories">&#9776; Categories</button>
-    <a href="{% url 'core:home' %}" class="font-bold text-lg">{{ STORE_NAME }}</a>
-    <form action="{% url 'catalog:product_list' %}" method="get" class="hidden md:block ml-4 flex-1 max-w-md">
-      <input type="search" name="q" placeholder="Search products" aria-label="Search products" class="w-full border rounded px-2 py-1 text-sm">
+{% load category_nav %}
+<div class="topbar">
+  <div class="wrap">
+    <span>Pay cash when your order arrives. We call you to confirm first.</span>
+    <a href="{% url 'track_order' %}">Track an order</a>
+  </div>
+</div>
+<header class="site-header">
+  <div class="wrap">
+    <button type="button" class="icon-btn" @click="nav = true" aria-controls="category-panel" :aria-expanded="nav" aria-label="Browse categories">
+      {% include "partials/icon.html" with name="menu" %}
+    </button>
+    <a href="{% url 'core:home' %}" class="brand">{{ STORE_NAME }}</a>
+    <nav class="main-nav" aria-label="Main">
+      <a href="{% url 'lots:list' %}" {% if request.resolver_match.namespace == "lots" %}aria-current="page"{% endif %}>Lots</a>
+      {% top_categories 5 as roots %}
+      {% for c in roots %}<a href="{{ c.get_absolute_url }}">{{ c.name }}</a>{% endfor %}
+    </nav>
+    <form role="search" class="search" action="{% url 'catalog:product_list' %}" method="get">
+      <label for="site-search" class="sr-only">Search the store</label>
+      <input id="site-search" type="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search sofas, chargers, watches">
     </form>
-    <div class="ml-auto flex items-center gap-4 text-sm">
-      <a href="{% url 'track_order' %}" class="hidden sm:inline">Track order</a>
-      {% if user.is_staff %}<a href="{% url 'portal:dashboard' %}" class="hidden sm:inline">Staff portal</a>{% endif %}
-      {% if user.is_authenticated %}<a href="{% url 'accounts:account' %}">My account</a>{% else %}<a href="{% url 'accounts:login' %}">Log in</a>{% endif %}
-      <a href="{% url 'cart:detail' %}" id="cart-link" class="font-medium">
-        Cart (<span id="cart-count">{{ cart_count|default:0 }}</span>)
+    <div class="header-actions">
+      {% if user.is_staff %}<a href="{% url 'portal:dashboard' %}" class="btn btn-sm btn-line hide-sm">Staff portal</a>{% endif %}
+      <a href="{% if user.is_authenticated %}{% url 'accounts:account' %}{% else %}{% url 'accounts:login' %}{% endif %}" class="icon-btn" aria-label="{% if user.is_authenticated %}My account{% else %}Log in{% endif %}">
+        {% include "partials/icon.html" with name="user" %}
+      </a>
+      <a href="{% url 'catalog:saved' %}" class="icon-btn" aria-label="Saved pieces">
+        {% include "partials/icon.html" with name="heart" %}
+        <span id="saved-count" class="badge badge-tag">{% with n=saved_count %}{% if n %}{{ n }}{% endif %}{% endwith %}</span>
+      </a>
+      <a href="{% url 'cart:detail' %}" id="cart-link" class="icon-btn" aria-label="Open your cart"
+         @click.prevent="$dispatch('open-cart')">
+        {% include "partials/icon.html" with name="cart" %}
+        <span id="cart-count" class="badge">{{ cart_count|default:0 }}</span>
       </a>
     </div>
   </div>
-  <form action="{% url 'catalog:product_list' %}" method="get" class="md:hidden px-4 pb-3">
-    <input type="search" name="q" placeholder="Search products" aria-label="Search products" class="w-full border rounded px-2 py-1 text-sm">
-  </form>
 </header>

@@ -1,0 +1,9 @@
+{% load money storefront %}
+<div class="sold-card">
+  <div class="media">
+    {% with image=product.main_image %}{% if image %}<img src="{{ image.image.url }}" alt="" loading="lazy">{% endif %}{% endwith %}
+    <span class="stamp" style="--d: {{ forloop.counter0|default:0 }}00ms">SOLD</span>
+  </div>
+  <span style="font-weight: 500">{{ product.title }}</span>
+  <span class="muted small">{{ product.min_price|rupees }}, sold {{ product.sold_out_at|ago }} ago</span>
+</div>

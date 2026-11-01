@@ -21,11 +21,20 @@ def children_of(parent_id):
     return list(active_categories().filter(parent_id=parent_id).only("name", "slug", "parent"))
 
 
-def tree(current=None):
+def roots(request=None):
+    """Top-level categories, loaded once per request (the header and the menu both use them)."""
+    if request is None:
+        return children_of(None)
+    if not hasattr(request, "_category_roots"):
+        request._category_roots = children_of(None)
+    return request._category_roots
+
+
+def tree(current=None, request=None):
     """Top-level nodes. The nodes on the path to `current` carry their loaded `children`."""
     path = current.ancestors(include_self=True) if current else []
     path_ids = [c.pk for c in path]
-    nodes = children_of(None)
+    nodes = roots(request)
     level = nodes
     for depth, category_id in enumerate(path_ids):
         node = next((n for n in level if n.pk == category_id), None)

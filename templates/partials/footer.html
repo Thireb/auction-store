@@ -1,8 +1,12 @@
-<footer class="bg-white border-t mt-8">
-  <div class="max-w-7xl mx-auto px-4 py-6 text-sm text-gray-600 flex flex-wrap gap-4 justify-between">
-    <p>&copy; {% now "Y" %} {{ STORE_NAME }}. Cash on Delivery across Pakistan.</p>
-    <nav class="flex flex-wrap gap-4">
-      <a href="{% url 'track_order' %}">Track order</a>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="stack" style="gap: 8px; max-width: 38ch">
+      <span class="brand" style="color: var(--white)">{{ STORE_NAME }}</span>
+      <span>Dubai auction pieces and export leftovers. Cash on delivery across Pakistan.</span>
+    </div>
+    <nav aria-label="Footer">
+      <a href="{% url 'lots:list' %}">Lots</a>
+      <a href="{% url 'track_order' %}">Track an order</a>
       {% for p in footer_pages %}<a href="{{ p.get_absolute_url }}">{{ p.title }}</a>{% endfor %}
     </nav>
   </div>

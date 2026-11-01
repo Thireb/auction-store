@@ -56,6 +56,7 @@ class ProductForm(StyledFormMixin, forms.ModelForm):
             "category",
             "brand",
             "condition",
+            "condition_notes",
             "description",
             "origin_note",
             "is_active",
@@ -64,7 +65,10 @@ class ProductForm(StyledFormMixin, forms.ModelForm):
             "advance_type",
             "advance_value",
         ]
-        widgets = {"description": forms.Textarea(attrs={"rows": 4})}
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 4}),
+            "condition_notes": forms.Textarea(attrs={"rows": 3}),
+        }
 
     def __init__(self, *args, category=None, **kwargs):
         super().__init__(*args, **kwargs)

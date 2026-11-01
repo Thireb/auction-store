@@ -20,6 +20,7 @@ urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     path("", include("apps.core.urls")),
     path("", include("apps.catalog.urls")),
+    path("lots/", include("apps.inventory.urls")),
     path("cart/", include("apps.cart.urls")),
     path("account/", include("apps.accounts.urls")),
     path("track/", accounts_views.track_order, name="track_order"),

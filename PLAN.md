@@ -1,6 +1,6 @@
 # Auction Store: Project Plan
 
-Status: **approved by Ahmad on 2026-10-30**. Phases 1 to 6 are built. Phase 7 has the production files; the first deploy waits for the PetHost plan.
+Status: **approved by Ahmad on 2026-10-30**. Phases 1 to 6 are built. Phase 7 has the production files; the first deploy waits for the PetHost plan. Phase 9 (storefront design) is built on branch `phase-9/storefront`.
 
 ## 0. Decisions from Ahmad
 
@@ -288,8 +288,32 @@ Fake order protection (a large COD risk in Pakistan):
 ### Phase 8: Later (after real use)
 - Courier API booking and tracking, after a partner is chosen.
 - WhatsApp or SMS messages, only if a paid service is approved later.
-- Real UI design.
 - Reports: profit per lot, sales per category, COD reconciliation.
+
+### Phase 9: Storefront design ("lots")
+
+Approved by Ahmad on 2026-11-01. Mockups: https://claude.ai/artifact/UshbKGTrJ8u5X7cRuXR5mr
+
+Goal: customers do not only buy and leave. Each shipment is a public **lot** with a number, a story and a count of pieces left. A new lot opens at a set time, so customers come back.
+
+Backend:
+
+1. **Public lots.** `Lot` gets `slug`, `public_title`, `story`, `cover_image`, `is_public` and `opens_at`. A product belongs to the lots it has stock in (`StockItem`). Pages: `/lots/`, `/lots/<slug>/`, `/lots/<slug>/dig/` and `/lots/<slug>/calendar.ics` (a free reminder).
+2. **Lot opening time.** A product whose stock is only in lots that open later is hidden until the lot opens (`Product.objects.listed()`).
+3. **Lot numbers.** `apps.inventory.lots` counts pieces received and pieces left per lot, in 1 query.
+4. **Saved pieces.** Guests save in the session. Signed-in customers save in `SavedProduct`. The session list merges into the account at login.
+5. **Just sold.** Products sold out in the last 3 days show with a "Sold" stamp. They cannot be opened or bought.
+6. **Condition notes.** `Product.condition_notes`: one line per note, shown under the condition scale.
+7. **Recently viewed.** The last 12 product pages, in the session.
+8. **Delivery estimate.** `/cart/quote/` returns the delivery fee and the days for a city, from `apps.shipping.services.quote()`.
+9. **Lot reminders.** `ShippingSettings.whatsapp_channel_url` (a free WhatsApp channel). Empty hides the button.
+10. **Staff portal.** The lot form, the product form and the store settings get the new fields.
+
+Frontend:
+
+1. One hand-written stylesheet (`static/store/store.css`) and one small script (`static/store/store.js`). No Tailwind and no build step on the storefront. HTMX and Alpine stay.
+2. Pages: home, lot list, lot page, Dig mode, product list and category, product page, cart drawer and cart page, checkout, thank-you page, account, log in, sign up, track order and content pages.
+3. Motion: the lot tag swings, the hero cards fan out, the stock bar fills, a heart pops, the cart drawer slides, Dig cards fly out and a stamp drops on "Sold". Page changes use View Transitions where the browser has them. All motion stops when the visitor asks for reduced motion.
 
 ## 14. Open questions
 

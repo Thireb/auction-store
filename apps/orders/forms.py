@@ -6,7 +6,14 @@ from apps.shipping.models import City
 
 from .models import Order
 
-INPUT = "mt-1 block w-full border rounded px-3 py-2 bg-white"
+# Browser autofill hints, so a phone fills the checkout form in a few taps.
+AUTOCOMPLETE = {
+    "full_name": "name",
+    "phone": "tel",
+    "email": "email",
+    "address": "street-address",
+    "password": "new-password",
+}
 
 
 class CheckoutForm(forms.Form):
@@ -33,9 +40,12 @@ class CheckoutForm(forms.Form):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
-        for field in self.fields.values():
-            if not isinstance(field.widget, forms.CheckboxInput):
-                field.widget.attrs.setdefault("class", INPUT)
+        for name, hint in AUTOCOMPLETE.items():
+            self.fields[name].widget.attrs["autocomplete"] = hint
+        self.fields["phone"].widget.attrs.update(
+            {"inputmode": "tel", "placeholder": "0300 1234567"}
+        )
+        self.fields["landmark"].widget.attrs["placeholder"] = "For example, near the mosque gate"
         self.fields["city"].widget.attrs.update(
             {
                 "hx-get": "",

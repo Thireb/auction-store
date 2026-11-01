@@ -1,10 +1,12 @@
-<div id="messages" class="max-w-7xl mx-auto px-4">
-  {% for message in messages %}
-    <div class="mt-4 rounded border px-4 py-2 text-sm
-                {% if message.tags == 'error' %}border-red-300 bg-red-50{% elif message.tags == 'success' %}border-green-300 bg-green-50{% else %}border-gray-300 bg-white{% endif %}"
-         x-data="{ show: true }" x-show="show">
-      {{ message }}
-      <button type="button" class="float-right" @click="show = false" aria-label="Close">&times;</button>
+<div id="messages" class="wrap" aria-live="polite">
+  {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+        <div class="msg{% if message.tags %} msg-{{ message.tags }}{% endif %}" x-data="{ show: true }" x-show="show">
+          <span>{{ message }}</span>
+          <button type="button" @click="show = false" aria-label="Close message">&times;</button>
+        </div>
+      {% endfor %}
     </div>
-  {% endfor %}
+  {% endif %}
 </div>

@@ -1,46 +1,48 @@
-<form id="filters" method="get" class="space-y-4 text-sm"
-      hx-get="{{ request.path }}" hx-target="#results" hx-swap="outerHTML" hx-push-url="true"
+<form id="filters" method="get" class="filters"
+      hx-get="{{ request.path }}" hx-target="#results" hx-swap="outerHTML transition:true" hx-push-url="true"
       hx-trigger="change, submit">
-  <div>
-    <label class="block font-medium" for="filter-q">Search</label>
-    <input id="filter-q" type="search" name="q" value="{{ active.q|default:'' }}" class="mt-1 w-full border rounded px-2 py-1">
+  <div class="field">
+    <label for="filter-q">Search</label>
+    <input id="filter-q" type="search" name="q" value="{{ active.q|default:'' }}">
   </div>
-  <div>
-    <label class="block font-medium" for="filter-sort">Sort</label>
-    <select id="filter-sort" name="sort" class="mt-1 w-full border rounded px-2 py-1 bg-white">
-      <option value="">Best match / newest</option>
+  <div class="field">
+    <label for="filter-sort">Sort</label>
+    <select id="filter-sort" name="sort">
+      <option value="">Best match or newest</option>
       {% for key, label in options.sorts %}<option value="{{ key }}" {% if active.sort == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
   </div>
   <fieldset>
-    <legend class="font-medium">Price (Rs)</legend>
-    <div class="flex gap-2 mt-1">
-      <input type="number" name="min_price" min="0" placeholder="Min" value="{{ active.min_price|default:'' }}" class="w-1/2 border rounded px-2 py-1">
-      <input type="number" name="max_price" min="0" placeholder="Max" value="{{ active.max_price|default:'' }}" class="w-1/2 border rounded px-2 py-1">
+    <legend>Price (Rs)</legend>
+    <div class="row" style="flex-wrap: nowrap; gap: 8px">
+      <label class="sr-only" for="min-price">Lowest price</label>
+      <input id="min-price" class="input" type="number" name="min_price" min="0" placeholder="From" value="{{ active.min_price|default:'' }}">
+      <label class="sr-only" for="max-price">Highest price</label>
+      <input id="max-price" class="input" type="number" name="max_price" min="0" placeholder="To" value="{{ active.max_price|default:'' }}">
     </div>
   </fieldset>
   <fieldset>
-    <legend class="font-medium">Condition</legend>
+    <legend>Condition</legend>
     {% for key, label in options.conditions %}
-      <label class="flex gap-2 items-center"><input type="checkbox" name="condition" value="{{ key }}" {% if key in active.condition %}checked{% endif %}> {{ label }}</label>
+      <label class="check"><input type="checkbox" name="condition" value="{{ key }}" {% if key in active.condition %}checked{% endif %}> {{ label }}</label>
     {% endfor %}
   </fieldset>
   {% if options.brands %}
     <fieldset>
-      <legend class="font-medium">Brand</legend>
+      <legend>Brand</legend>
       {% for brand in options.brands %}
-        <label class="flex gap-2 items-center"><input type="checkbox" name="brand" value="{{ brand.slug }}" {% if brand.slug in active.brand %}checked{% endif %}> {{ brand.name }}</label>
+        <label class="check"><input type="checkbox" name="brand" value="{{ brand.slug }}" {% if brand.slug in active.brand %}checked{% endif %}> {{ brand.name }}</label>
       {% endfor %}
     </fieldset>
   {% endif %}
   {% for attribute, values, selected in options.attributes %}
     <fieldset>
-      <legend class="font-medium">{{ attribute }}</legend>
+      <legend>{{ attribute }}</legend>
       {% for value in values %}
-        <label class="flex gap-2 items-center"><input type="checkbox" name="attr_{{ attribute.slug }}" value="{{ value }}" {% if value in selected %}checked{% endif %}> {{ value }}{% if attribute.unit %} {{ attribute.unit }}{% endif %}</label>
+        <label class="check"><input type="checkbox" name="attr_{{ attribute.slug }}" value="{{ value }}" {% if value in selected %}checked{% endif %}> {{ value }}{% if attribute.unit %} {{ attribute.unit }}{% endif %}</label>
       {% endfor %}
     </fieldset>
   {% endfor %}
-  <noscript><button type="submit" class="px-3 py-1 rounded bg-black text-white">Apply</button></noscript>
-  <a href="{{ request.path }}" class="underline">Clear filters</a>
+  <noscript><button type="submit" class="btn btn-ink btn-sm">Apply</button></noscript>
+  <a href="{{ request.path }}">Clear filters</a>
 </form>

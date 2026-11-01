@@ -1,28 +1,27 @@
 {% load money %}
-<div id="order-summary" class="bg-white border rounded p-4 text-sm">
-  <h2 class="font-semibold text-base mb-2">Order summary</h2>
-  <ul class="divide-y">
-    {% for line in cart.lines %}
-      <li class="py-2 flex justify-between gap-2">
-        <span>{{ line.quantity }} x {{ line.product.title }}{% if line.variant.name %} ({{ line.variant.name }}){% endif %}</span>
-        <span>{{ line.line_total|rupees }}</span>
-      </li>
-    {% endfor %}
-  </ul>
-  <dl class="mt-2 border-t pt-2 space-y-1">
-    <div class="flex justify-between"><dt>Subtotal</dt><dd>{{ totals.subtotal|rupees }}</dd></div>
+<div id="order-summary" class="panel stack" style="gap: 14px">
+  <h2 class="h3">Your order</h2>
+  {% for line in cart.lines %}
+    <div class="line" style="grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px">
+      {% include "cart/partials/line_media.html" %}
+      <span class="small">{{ line.quantity }} &times; {{ line.product.title }}{% if line.variant.name %} ({{ line.variant.name }}){% endif %}</span>
+      <span class="small"><strong>{{ line.line_total|rupees }}</strong></span>
+    </div>
+  {% endfor %}
+  <dl class="totals" style="border-top: 1px solid var(--line); padding-top: 12px">
+    <div><dt>Subtotal</dt><dd style="margin: 0">{{ totals.subtotal|rupees }}</dd></div>
     {% if totals.delivery_fee is None %}
-      <div class="text-gray-500">Choose a city to see delivery fees.</div>
+      <p class="help">Choose your city to see the delivery fee.</p>
     {% else %}
-      <div class="flex justify-between"><dt>Delivery</dt><dd>{% if totals.delivery_fee %}{{ totals.delivery_fee|rupees }}{% else %}Free{% endif %}</dd></div>
-      {% if totals.cod_fee %}<div class="flex justify-between"><dt>COD fee</dt><dd>{{ totals.cod_fee|rupees }}</dd></div>{% endif %}
+      <div><dt>Delivery</dt><dd style="margin: 0">{% if totals.delivery_fee %}{{ totals.delivery_fee|rupees }}{% else %}Free{% endif %}</dd></div>
+      {% if totals.cod_fee %}<div><dt>Cash on delivery fee</dt><dd style="margin: 0">{{ totals.cod_fee|rupees }}</dd></div>{% endif %}
     {% endif %}
-    <div class="flex justify-between font-semibold text-base border-t pt-2"><dt>Total</dt><dd>{{ totals.total|rupees }}</dd></div>
-    {% if totals.advance %}
-      <div class="mt-2 rounded bg-yellow-50 border border-yellow-300 p-2">
-        This order needs an advance of <strong>{{ totals.advance|rupees }}</strong> by bank transfer.
-        You pay the rest in cash on delivery. The payment details show after you place the order.
-      </div>
-    {% endif %}
+    <div class="grand"><dt>Total</dt><dd style="margin: 0">{{ totals.total|rupees }}</dd></div>
   </dl>
+  {% if totals.advance %}
+    <div class="advance-box small">
+      This order needs an advance of <strong>{{ totals.advance|rupees }}</strong> by bank transfer.
+      You pay the rest in cash on delivery. The payment details show after you place the order.
+    </div>
+  {% endif %}
 </div>

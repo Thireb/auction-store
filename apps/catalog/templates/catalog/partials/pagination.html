@@ -1,7 +1,7 @@
 {% if page_obj.has_other_pages %}
-<nav class="mt-6 flex gap-2 justify-center text-sm">
-  {% if page_obj.has_previous %}<a class="px-3 py-1 border rounded bg-white" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
-  <span class="px-3 py-1">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-  {% if page_obj.has_next %}<a class="px-3 py-1 border rounded bg-white" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+<nav class="pager" aria-label="Pages">
+  {% if page_obj.has_previous %}<a class="btn btn-line btn-sm" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+  <span class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="btn btn-line btn-sm" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
 </nav>
 {% endif %}

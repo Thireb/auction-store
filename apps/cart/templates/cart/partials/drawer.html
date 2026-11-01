@@ -1,0 +1,54 @@
+{% load money %}
+<div class="drawer-head">
+  <h2 class="h3">Your cart{% if cart.count %} ({{ cart.count }}){% endif %}</h2>
+  <button type="button" class="icon-btn" @click="cart = false" aria-label="Close cart">{% include "partials/icon.html" with name="close" %}</button>
+</div>
+{% if cart.lines %}
+  <div class="drawer-body">
+    {% for line in cart.lines %}
+      <div class="line">
+        {% include "cart/partials/line_media.html" %}
+        <div class="stack" style="gap: 4px">
+          <a class="line-title" href="{{ line.product.get_absolute_url }}">{{ line.product.title }}</a>
+          <span class="muted small">{% if line.variant.name %}{{ line.variant.name }}, {% endif %}{{ line.quantity }} &times; {{ line.unit_price|rupees }}</span>
+          {% if line.error %}<span class="error">{{ line.error }}</span>{% endif %}
+          <form hx-post="{% url 'cart:remove' line.variant.pk %}" hx-target="closest .drawer" hx-swap="innerHTML">
+            {% csrf_token %}<input type="hidden" name="drawer" value="1">
+            <button type="submit" class="link-btn" style="min-height: 32px">Remove</button>
+          </form>
+        </div>
+        <span class="price" style="font-size: 20px">{{ line.line_total|rupees }}</span>
+      </div>
+    {% endfor %}
+    {% include "cart/partials/free_delivery.html" %}
+    {% if suggestions %}
+      <div class="stack" style="gap: 10px">
+        <span class="h3" style="font-size: 16px">From the same lot</span>
+        {% for product in suggestions %}
+          <a href="{{ product.get_absolute_url }}" class="row" style="flex-wrap: nowrap; background: var(--paper-2); border-radius: 14px; padding: 10px; text-decoration: none; color: var(--ink)">
+            <span class="media" style="width: 56px; height: 56px; aspect-ratio: 1; border-radius: 10px; flex: none">{% with image=product.main_image %}{% if image %}<img src="{{ image.image.url }}" alt="">{% endif %}{% endwith %}</span>
+            <span style="flex: 1">{{ product.title }}<br><strong>{{ product.min_price|rupees }}</strong></span>
+            {% include "partials/icon.html" with name="chevron" %}
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+  <div class="drawer-foot">
+    <div class="row between" style="font-size: 18px"><span>Subtotal</span><strong>{{ cart.subtotal|rupees }}</strong></div>
+    {% if cart.savings %}<span class="small" style="color: var(--ok)">You save {{ cart.savings|rupees }} with bulk prices.</span>{% endif %}
+    {% if cart.has_errors %}
+      <a href="{% url 'cart:detail' %}" class="btn btn-ink btn-block">Fix your cart</a>
+    {% else %}
+      <a href="{% url 'orders:checkout' %}" class="btn btn-ink btn-block">Go to checkout</a>
+    {% endif %}
+    <button type="button" class="btn btn-line btn-block" @click="cart = false">Keep browsing</button>
+  </div>
+{% else %}
+  <div class="drawer-body" style="justify-content: center; text-align: center">
+    <p class="h3">Your cart is empty.</p>
+    <p class="muted">The newest lot is a good place to start.</p>
+    <a href="{% url 'lots:list' %}" class="btn btn-ink">See the lots</a>
+  </div>
+{% endif %}
+<span class="badge" id="cart-count" hx-swap-oob="true">{{ cart.count }}</span>

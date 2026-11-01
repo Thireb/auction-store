@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 
 from apps.catalog.models import Attribute, PriceTier, Product
@@ -475,3 +476,40 @@ def test_settings_save(client, owner):
     settings_row = ShippingSettings.load()
     assert settings_row.default_delivery_fee == 300
     assert settings_row.low_stock_default == 3
+
+
+def test_lot_form_has_public_fields(client, owner):
+    client.force_login(owner)
+    lot = Lot.objects.create(reference="DXB-77")
+    data = {
+        "reference": "DXB-77",
+        "is_public": "on",
+        "public_title": "Hotel refit",
+        "story": "Sofas from a hotel.",
+        "opens_at": "2026-12-05T20:00",
+    }
+    response = client.post(reverse("portal:lot_edit", args=[lot.pk]), data)
+    assert response.status_code == 302, response.context["form"].errors
+    lot.refresh_from_db()
+    assert lot.is_public and lot.public_title == "Hotel refit"
+    assert timezone.localtime(lot.opens_at).hour == 20  # Asia/Karachi
+    assert lot.slug == "dxb-77"
+
+
+def test_settings_save_whatsapp_link(client, owner):
+    client.force_login(owner)
+    data = {
+        "default_delivery_fee": 300,
+        "default_cod_fee": 0,
+        "bulky_item_fee": 0,
+        "advance_percent_above_total": 0,
+        "low_stock_default": 2,
+        "whatsapp_channel_url": "whatsapp.com/channel/demo",
+    }
+    assert client.post(reverse("portal:settings"), data).status_code == 302
+    assert ShippingSettings.load().whatsapp_channel_url == "https://whatsapp.com/channel/demo"
+
+
+def test_product_form_has_condition_notes(client, owner):
+    client.force_login(owner)
+    assert 'name="condition_notes"' in client.get(reverse("portal:product_add")).content.decode()

@@ -12,7 +12,8 @@ def category_nav(context):
     product = context.get("product")
     if current is None and product is not None and hasattr(product, "category"):
         current = product.category
-    return {"nodes": nav.tree(current), "current": current, "request": context.get("request")}
+    request = context.get("request")
+    return {"nodes": nav.tree(current, request), "current": current, "request": request}
 
 
 @register.filter
@@ -22,3 +23,9 @@ def open_node(nodes):
         if getattr(node, "on_path", False) and node.has_children:
             return node.pk
     return "null"
+
+
+@register.simple_tag(takes_context=True)
+def top_categories(context, limit=6):
+    """Top-level categories for the header links."""
+    return nav.roots(context.get("request"))[:limit]

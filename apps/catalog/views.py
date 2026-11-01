@@ -1,10 +1,16 @@
 from django.core.paginator import Paginator
 from django.db.models import Prefetch
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
+
+from apps.inventory import lots
+from apps.shipping.models import City
 
 from . import nav
 from .models import Category, Product, ProductImage, Variant
 from .pricing import buyer_is_wholesale, visible_tiers
+from .saved import Saved, recent_ids, remember_viewed
 from .search import filter_options, filter_products
 
 PAGE_SIZE = 24
@@ -22,6 +28,12 @@ def product_queryset():
             Prefetch("images", queryset=ProductImage.objects.order_by("sort_order", "pk")),
         )
     )
+
+
+def ordered(products, ids):
+    """`products` limited to `ids`, in the order of `ids`."""
+    found = {p.pk: p for p in products.filter(pk__in=ids)}
+    return [found[pk] for pk in ids if pk in found]
 
 
 def _render_list(request, products, context, category=None):
@@ -65,8 +77,28 @@ def product_detail(request, slug):
     product = get_object_or_404(product_queryset(), slug=slug)
     variants = product.active_variants()
     wholesale = buyer_is_wholesale(request.user)
+    remember_viewed(request, product)
+    lot = lots.lot_for_product(product)
+    more = (
+        lots.lot_products(product_queryset(), lot)
+        if lot
+        else product_queryset().filter(category=product.category)
+    )
+    parent = product.category.parent
+    nearby = (parent.children if parent else Category.objects.filter(parent=None)).filter(
+        is_active=True
+    )
     context = {
         "product": product,
+        "lot": lot,
+        "more": more.exclude(pk=product.pk)[:8],
+        "recent": ordered(product_queryset(), recent_ids(request, exclude=product.pk)[:8]),
+        "nearby": nearby.exclude(pk=product.category_id)[:12],
+        "cities": City.objects.filter(is_active=True, cod_allowed=True),
+        "condition_steps": [
+            (label, i <= _condition_index(product), key == product.condition)
+            for i, (key, label) in enumerate(Product.CONDITION_SHORT.items())
+        ],
         "variants": variants,
         "variant_data": [
             {
@@ -94,6 +126,43 @@ def product_detail(request, slug):
         "breadcrumbs": product.category.ancestors(include_self=True),
     }
     return render(request, "catalog/product_detail.html", context)
+
+
+def _condition_index(product):
+    return list(Product.CONDITION_SHORT).index(product.condition)
+
+
+def saved_list(request):
+    saved = Saved(request)
+    products = saved.products()
+    listed_ids = set(
+        product_queryset().filter(pk__in=[p.pk for p in products]).values_list("pk", flat=True)
+    )
+    context = {
+        "available": ordered(product_queryset(), [p.pk for p in products if p.pk in listed_ids]),
+        "gone": [p for p in products if p.pk not in listed_ids],
+    }
+    return render(request, "catalog/saved.html", context)
+
+
+@require_POST
+def saved_toggle(request, pk):
+    product = get_object_or_404(Product.objects.visible(), pk=pk)
+    saved = Saved(request)
+    now_saved = saved.toggle(product)
+    if request.htmx:
+        context = {
+            "product": product,
+            "is_saved": now_saved,
+            "just_saved": now_saved,
+            "inline": request.POST.get("inline"),
+            "count": len(saved),
+        }
+        return render(request, "catalog/partials/heart_result.html", context)
+    target = request.POST.get("next")
+    if not url_has_allowed_host_and_scheme(target, {request.get_host()}):
+        target = product.get_absolute_url()
+    return redirect(target)
 
 
 def nav_children(request, pk):

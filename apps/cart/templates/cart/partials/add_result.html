@@ -1,6 +1,6 @@
 {% if error %}
-  <p class="text-sm text-red-600">{{ error }}</p>
+  <p class="error">{{ error }}</p>
 {% else %}
-  <p class="text-sm text-green-700">Added to your cart. <a class="underline" href="{% url 'cart:detail' %}">View cart</a></p>
+  <p class="help" style="color: var(--ok)">Added to your cart. <a href="{% url 'cart:detail' %}">View cart</a></p>
   {% include "cart/partials/cart_count.html" %}
 {% endif %}

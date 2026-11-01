@@ -3,6 +3,8 @@
 {% block title %}Your cart | {{ STORE_NAME }}{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-bold mb-4">Your cart</h1>
-  {% include "cart/partials/cart_body.html" %}
+  <div class="wrap section">
+    <h1 class="h2" style="margin-bottom: 24px">Your cart</h1>
+    {% include "cart/partials/cart_body.html" %}
+  </div>
 {% endblock %}
